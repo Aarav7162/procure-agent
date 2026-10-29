@@ -50,7 +50,7 @@ The following 11 models are verified active and accessible on the platform:
 Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to return mock fixtures if scans are missing. They differ genuinely in algorithmic preprocessing and compute profiles:
 - **`ocr-worker-01` (Alpha)**: Raw Tesseract engine with Page Segmentation Mode 3 (fully automatic page segmentation). Faster compute (~2.0s), best for standard structured documents.
 - **`ocr-worker-02` (Beta)**: Advanced Preprocessing Pipeline: Grayscale normalization $\to$ 2.0x Contrast expansion $\to$ Edge Sharpening $\to$ Otsu-style Binarization $\to$ Tesseract PSM 6 (single uniform text block). Higher compute latency (~2.5s), superior accuracy on noisy or degraded scans.
-- **Scans Directory**: `data/real_scans/` (requires `doc_01.png` + human-typed companion transcript `doc_01.txt`). Verified via Character Error Rate (CER Levenshtein $\le 5\%$).
+- **Scans Directory**: `data/real_scans/` contains **generated test documents with exact ground truth** (`doc_01.png` + `doc_01.txt` through `doc_05.png` + `doc_05.txt`). These are generated receipt-style, bill-style, invoice-style, and printed paragraph images with realistic noise, fonts, and skew to evaluate real Tesseract OCR. Tesseract, CER and payouts stay real. Verified via Character Error Rate (CER Levenshtein $\le 5\%$).
 
 ### Task Family 2: Python Code Generation (`code-worker-01`)
 - **Real LLM Generation**: Uses live Groq API inference (`openai/gpt-oss-120b`) to synthesize production Python code.
@@ -68,7 +68,8 @@ Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to retu
 
 To ensure agent bids are not arbitrary fixtures, autonomous worker agents price machine labor using an explicit economic model:
 
-$$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \max\left(F_{\text{min}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)\right)$$
+### LLM & Code Worker Bid Formula
+$$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)$$
 
 Where:
 - **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.50$/1M input, $\$1.50$/1M output).
@@ -76,6 +77,18 @@ Where:
 - **$F_{\text{min}}$ (Minimum Operational Fee)**:
   - $\$0.15$ for `llm-worker-01` (agent uptime, availability readiness).
   - $\$0.20$ for `code-worker-01` (sandbox execution readiness and AST compilation).
+
+*(Note: The $F_{\text{min}}$ floor is inherently satisfied since $C_{\text{api}} \ge 0$ and $F_{\text{min}} > 0$.)*
+
+### OCR Worker Bid Formula (Priced Per Compute Second)
+OCR workers price their machine labor upfront **per compute second** based on expected runtime rather than post-execution measured costs:
+
+$$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \text{round}\left(T_{\text{expected}} \times R_{\text{sec}} + F_{\text{min}}, 2\right)\right)$$
+
+Where:
+- **$T_{\text{expected}}$ (Expected Compute Time)**: $2.0\text{s}$ for `ocr-worker-01` (Alpha, raw PSM 3); $2.5\text{s}$ for `ocr-worker-02` (Beta, multi-step binarized PSM 6).
+- **$R_{\text{sec}}$ (Compute Rate Per Second)**: $\$0.25/\text{s}$ for Alpha; $\$0.18/\text{s}$ for Beta.
+- **$F_{\text{min}}$ (Minimum Operational Fee)**: $\$0.20$ base engine initialization and OCR pipeline readiness.
 
 ### Plain Truth: The Minimum Fee Dominates
 **In all LLM-powered tasks, the minimum operational fee ($F_{\text{min}}$) completely dominates the raw API token cost ($C_{\text{api}}$).** 
@@ -86,8 +99,8 @@ Because modern inference platforms price tokens at fractions of a cent per reque
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **LLM Synthesis** | 150 input tokens, 350 output tokens (`gpt-oss-120b`) | $\$0.000600$ | $\$0.15$ | **$\$0.15$** | **Minimum Fee (99.6%)** |
 | **Python Code Gen** | 100 input tokens, 250 output tokens (`gpt-oss-120b`) | $\$0.000425$ | $\$0.20$ | **$\$0.20$** | **Minimum Fee (99.8%)** |
-| **OCR Alpha** | Raw Tesseract PSM 3 (avg 2.0s compute @ $0.25/s) | $\$0.500000$ (compute) | $\$0.20$ | **$\$0.70$** | **Compute Time (71.4%)** |
-| **OCR Beta** | Binarized Tesseract PSM 6 (avg 2.5s compute @ $0.18/s) | $\$0.450000$ (compute) | $\$0.20$ | **$\$0.65$** | **Compute Time (69.2%)** |
+| **OCR Alpha** | Raw Tesseract PSM 3 (priced @ 2.0s compute @ $0.25/s) | $\$0.500000$ (compute) | $\$0.20$ | **$\$0.70$** | **Compute Time (71.4%)** |
+| **OCR Beta** | Binarized Tesseract PSM 6 (priced @ 2.5s compute @ $0.18/s) | $\$0.450000$ (compute) | $\$0.20$ | **$\$0.65$** | **Compute Time (69.2%)** |
 
 ---
 
@@ -123,15 +136,22 @@ Each worker operates under a distinct, isolated PayPal sandbox account. **No two
 
 ## 7. Verified Live Adversarial Flow (`PAYOUT_MODE=live`)
 
-In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py`):
-1. **Rogue Underbids**: Bids $\$0.35$ (undercutting market rate $\$0.45$) and is awarded the task.
-2. **Budget Reserved**: $\$0.35$ reserved for Rogue (`res_943a950648a8`).
-3. **Defect Caught**: Rogue submits code returning `-1.0` on non-positive amounts; fails hidden unit test `assert calculate_tax(0.0) == 0.0`.
+In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py` and `scripts/test_ocr_gate.py`):
+1. **Rogue Underbids**: Bids $\$0.30 - \$0.35$ (undercutting honest market rate) and is awarded the task.
+2. **Budget Reserved**: Exact bid amount reserved for Rogue.
+3. **Defect Caught**: Rogue submits flawed delivery (e.g. OCR Character Error Rate exceeds 5.0% threshold or code fails hidden unit tests).
 4. **Payment Withheld & Reservation Released**: Rogue's reservation is released back to the treasury pool. Rogue receives **$\$0.00$**.
-5. **Dynamic Reallocation**: Task is dynamically reassigned to `code-worker-01`.
-6. **Delivery & Verification**: Honest worker delivers verified code via live Groq LLM inference; passes two-layer verification.
+5. **Dynamic Reallocation**: Task is dynamically reassigned to the winning honest worker.
+6. **Delivery & Verification**: Honest worker delivers verified output via real OCR / live Groq LLM inference; passes two-layer verification.
 7. **Real PayPal Settlement**: Real PayPal Payout submitted in `PAYOUT_MODE=live`.
-   - **Batch ID**: `WPWDV6FSG5ACN`
-   - **Final Reconciled Status**: `PAYOUT_SUCCESS`
-   - **Rogue Paid**: `$\$0.00$`
-   - **Honest Worker Paid**: `$\$0.45$`
+   - **Rogue Paid**: `$\$0.00$` (Asserted in ledger and PayPal API)
+   - **Honest Worker Paid**: Verified bid amount settled with live PayPal Batch ID and status `PAYOUT_SUCCESS`.
+
+---
+
+## 8. Future Use Cases (NOT Implemented)
+
+The following architectural capabilities are explicitly out of scope for the current hackathon milestone and are **NOT implemented**:
+- **Batch compute across distributed nodes**: ProcureAgent currently runs single tasks sequentially against registered local and API-driven worker agents; distributed parallel map-reduce scheduling across external worker clusters is not implemented.
+- **Human-in-the-loop data labeling**: All acceptance criteria are strictly programmatic, deterministic, or LLM-evaluated. No manual annotation queues, worker labeling portals, or human review interfaces are implemented.
+- **Location-restricted / Geo-fenced data collection**: Worker nodes operate without residential proxy pools, IP rotation networks, or geographical egress constraints.

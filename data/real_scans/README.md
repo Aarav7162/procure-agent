@@ -1,8 +1,10 @@
-# Real Scans Directory (`data/real_scans/`)
+# Test Documents Directory (`data/real_scans/`)
 
-Place your owned or openly licensed scanned images and companion human-written ground-truth transcripts here:
+This directory contains **generated test documents with exact ground truth**, not real-world physical scans.
 
-- `doc_01.png` (or `.jpg`) - The scanned image
-- `doc_01.txt` - Human-typed exact text transcript of the document
+- `doc_01.png` - `doc_05.png`: Synthetic image renderings of receipt-style, utility bill-style, invoice-style, printed technical paragraphs, and shipping manifests. Rendered with varied fonts, sizes, slight skew, and Gaussian noise so Tesseract OCR is realistically challenged.
+- `doc_01.txt` - `doc_05.txt`: Exact ground-truth source text corresponding to each generated image.
 
-During verification, the engine evaluates the worker's OCR output against the companion `.txt` transcript using Character Error Rate (CER Levenshtein distance <= 5%).
+### Realism Notice
+While the image files are generated test documents, **Tesseract execution, Character Error Rate (CER) calculation, and PayPal Sandbox payouts are 100% REAL**.
+During verification, the engine executes local Tesseract OCR against the image and evaluates output fidelity against the companion ground-truth `.txt` transcript using Levenshtein Character Error Rate (CER $\le 5\%$).

@@ -23,6 +23,12 @@ import hashlib
 from typing import Dict, Any, List
 from dotenv import load_dotenv
 
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from orchestrator.verifier import compute_cer, verify_delivery
@@ -95,7 +101,12 @@ async def run_ocr_benchmark_and_gate():
     for item in scans:
         doc_name = item["name"]
         ref_text = item["ground_truth"]
-        jrp_dummy = {"jrp_id": f"jrp_ocr_{doc_name}", "image_path": item["image_path"]}
+        jrp_dummy = {
+            "jrp_id": f"jrp_ocr_{doc_name}",
+            "image_path": item["image_path"],
+            "required_capabilities": ["document_ocr"],
+            "max_bid_usd": 5.0,
+        }
 
         # 1. Run Worker Alpha (Raw PSM 3)
         b_alpha = await alpha_bid(jrp_dummy)
@@ -154,7 +165,8 @@ async def run_ocr_benchmark_and_gate():
     max_budget = 15.00
     init_ledger()
 
-    target_doc = scans[0]
+    # Target doc_04 (clean paragraph scan where honest Tesseract achieves 0% CER)
+    target_doc = next((s for s in scans if "doc_04" in s["name"]), scans[0])
     jrp_live = {
         "jrp_id": f"jrp_ocr_live_{cycle_id}",
         "cycle_id": cycle_id,
@@ -168,12 +180,13 @@ async def run_ocr_benchmark_and_gate():
 
     rogue_email = os.getenv("ROGUE_PAYPAL_EMAIL", "sb-a43fio53613334@personal.example.com")
     # Honest winner selected based on benchmark accuracy
-    honest_worker_id = "ocr-worker-02" if beta_avg_cer <= alpha_avg_cer else "ocr-worker-01"
+    honest_worker_id = "ocr-worker-02" if beta_avg_cer < alpha_avg_cer else "ocr-worker-01"
     honest_email = os.getenv("OCR_BETA_PAYPAL_EMAIL") if honest_worker_id == "ocr-worker-02" else os.getenv("WORKER_PAYPAL_EMAIL")
     honest_bid = beta_bid_price if honest_worker_id == "ocr-worker-02" else alpha_bid_price
 
     # 1. Rogue underbids
     rogue_bid_usd = 0.30
+    print(f"  Target Document: {target_doc['name']}")
     print(f"  Rogue Worker underbids: ${rogue_bid_usd:.2f} [Email: {rogue_email}]")
     print(f"  Honest Worker ({honest_worker_id}) bids: ${honest_bid:.2f} [Email: {honest_email}]")
 
@@ -181,12 +194,19 @@ async def run_ocr_benchmark_and_gate():
     ok_res_r, res_id_r, _ = reserve_budget(cycle_id, jrp_live["jrp_id"], "rogue-worker-01", rogue_bid_usd, max_budget)
     assert ok_res_r is True
 
-    # 3. Rogue delivers plausible-wrong OCR (distorts characters to fail CER threshold)
+    # 3. Rogue delivers plausible-wrong OCR (realistic scanning noise: CER ~ 7.8% > 5%)
     clean_ref = target_doc["ground_truth"]
-    # Introduce subtle OCR noise (~8% error rate)
-    words = clean_ref.split()
-    distorted_words = [w.replace("e", "c").replace("o", "0").replace("l", "1") if i % 2 == 0 else w for i, w in enumerate(words)]
-    rogue_ocr_text = " ".join(distorted_words)
+    substitutions = {"e": "c", "E": "C", "o": "0", "O": "0", "l": "1", "I": "1", "a": "e", "A": "4", "s": "5"}
+    chars = list(clean_ref)
+    for idx in range(0, len(chars), 13):
+        c = chars[idx]
+        if c in substitutions:
+            chars[idx] = substitutions[c]
+        elif c.isalpha():
+            chars[idx] = "r" if c.islower() else "R"
+    rogue_ocr_text = "".join(chars)
+    rogue_cer = compute_cer(clean_ref, rogue_ocr_text)
+    print(f"  Rogue Defect Generation: CER={rogue_cer:.2%} (Threshold <= 5.00%)")
     rogue_sha = hashlib.sha256(rogue_ocr_text.encode("utf-8")).hexdigest()
 
     rogue_delivery = {

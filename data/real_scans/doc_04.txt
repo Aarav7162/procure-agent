@@ -1,0 +1,9 @@
+ProcureAgent System Architecture
+
+The ProcureAgent settlement engine enforces deterministic
+verification before any funds leave escrow. Every job request
+package specifies cryptographically anchored constraints.
+Workers execute compute jobs off-chain, reporting delivery
+digests and execution metadata. The treasury validates outputs
+against hidden test suites or Levenshtein distance metrics
+prior to submitting automated batch payouts via PayPal.
