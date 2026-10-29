@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
-# Valid sandbox personal email for rogue adversary (asserted never paid in tests)
-ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", WORKER_PAYPAL_EMAIL)
+OCR_BETA_PAYPAL_EMAIL = os.getenv("OCR_BETA_PAYPAL_EMAIL", "sb-shusq53615721@personal.example.com")
+LLM_WORKER_PAYPAL_EMAIL = os.getenv("LLM_WORKER_PAYPAL_EMAIL", "sb-kgyi653615592@personal.example.com")
+ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", "sb-a43fio53613334@personal.example.com")
 
 WORKER_REGISTRY = [
     {
@@ -20,6 +21,14 @@ WORKER_REGISTRY = [
         "capabilities": ["document_ocr", "text_extraction", "receipt_transcription", "tesseract"],
         "port": int(os.getenv("OCR_WORKER_PORT", 8002)),
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
+        "pricing_model": "compute_seconds",
+    },
+    {
+        "worker_id": "ocr-worker-02",
+        "name": "OCR Specialist Beta",
+        "capabilities": ["document_ocr", "text_extraction", "receipt_transcription", "tesseract"],
+        "port": int(os.getenv("OCR_BETA_PORT", 8006)),
+        "worker_paypal_email": OCR_BETA_PAYPAL_EMAIL,
         "pricing_model": "compute_seconds",
     },
     {
@@ -35,7 +44,7 @@ WORKER_REGISTRY = [
         "name": "LLM Synthesis & Extraction Specialist",
         "capabilities": ["data_extraction", "summarization", "reasoning", "general_ai_execution", "web_research"],
         "port": int(os.getenv("LLM_WORKER_PORT", 8004)),
-        "worker_paypal_email": WORKER_PAYPAL_EMAIL,
+        "worker_paypal_email": LLM_WORKER_PAYPAL_EMAIL,
         "pricing_model": "token_metered",
     },
     {

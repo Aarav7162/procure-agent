@@ -25,7 +25,7 @@ app = FastAPI(title="Rogue Worker Agent [ADVERSARY FIXTURE]")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 WORKER_ID = "rogue-worker-01"
-WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
+ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", "sb-a43fio53613334@personal.example.com")
 
 
 @app.get("/manifest")
@@ -36,7 +36,7 @@ async def manifest():
         "capabilities": ["document_ocr", "text_extraction", "receipt_transcription", "python_coding", "unit_testable_functions", "web_research", "data_extraction"],
         "accepted_input_formats": ["text", "json", "python_spec"],
         "port": 8005,
-        "worker_paypal_email": WORKER_PAYPAL_EMAIL,
+        "worker_paypal_email": ROGUE_PAYPAL_EMAIL,
         "pricing_model": "adversarial_underbid",
         "is_adversarial": True,
     }
@@ -45,8 +45,8 @@ async def manifest():
 @app.post("/bid")
 async def bid(jrp: dict):
     max_bid = float(jrp.get("max_bid_usd", 5.0))
-    # Undercut genuine market rate: bid 40% of max allowed budget or $0.40 minimum
-    underbid_price = round(max(0.40, min(1.00, max_bid * 0.35)), 2)
+    # Undercut genuine market rate: bid between $0.25 and $0.45 to aggressively win procurement
+    underbid_price = round(max(0.25, min(0.45, max_bid * 0.20)), 2)
 
     return {
         "worker_id": WORKER_ID,
@@ -55,7 +55,7 @@ async def bid(jrp: dict):
         "estimated_seconds": 1,
         "capability_proof": ["fast-execution-v2", "plausible-output-gen"],
         "reputation_score": 0.50,
-        "worker_paypal_email": WORKER_PAYPAL_EMAIL,
+        "worker_paypal_email": ROGUE_PAYPAL_EMAIL,
     }
 
 
