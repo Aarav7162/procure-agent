@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from orchestrator.bottleneck_sensor import is_bottlenecked
+from orchestrator.local_executor import local_executor
 from orchestrator.jrp_builder import build_jrp, build_jrp_manual
 from orchestrator.budget_manager import BudgetManager
 from orchestrator.verifier import verify_delivery
@@ -145,6 +146,23 @@ async def health():
     return {"status": "ok", "service": "orchestrator"}
 
 
+@app.get("/local_executor")
+async def get_local_executor_status():
+    return local_executor.get_status()
+
+
+@app.post("/demo/occupy_local")
+async def demo_occupy_local(duration_sec: float = 6.0):
+    """
+    Deterministic demo trigger: occupies local 1-slot executor in background.
+    Subsequent task submissions while this runs will encounter a genuine bottleneck.
+    """
+    if local_executor.is_busy():
+        return {"status": "already_busy", "details": local_executor.get_status()}
+    local_executor.occupy_slot_background("demo_heavy_job", "Simulated heavy local workload", duration_sec)
+    return {"status": "occupied", "duration_sec": duration_sec, "details": local_executor.get_status()}
+
+
 # ─────────────────────────────────────────────
 # Core Agent Loop
 # ─────────────────────────────────────────────
@@ -152,17 +170,29 @@ async def health():
 async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: float):
     bm = BudgetManager(cycle_id=cycle_id, max_usd=max_budget_usd)
 
-    # Step 1: Check bottleneck
-    bottlenecked, reason = is_bottlenecked("ocr_batch")
+    # Step 1: Real Local Bottleneck Check
+    bottlenecked, reason = is_bottlenecked(task_deadline_sec=3.0)
 
     await broadcast("BOTTLENECK_CHECK", {
         "cycle_id": cycle_id,
         "bottlenecked": bottlenecked,
         "reason": reason,
+        "executor_status": local_executor.get_status(),
     })
 
     if not bottlenecked:
-        await broadcast("LOCAL_EXECUTION", {"cycle_id": cycle_id, "message": "Executing locally — no procurement needed."})
+        # Genuine Local Execution on host machine ($0 budget spent)
+        local_result = await local_executor.execute_local_job(
+            job_id=cycle_id,
+            description=task_description,
+            duration_sec=1.0,
+        )
+        await broadcast("LOCAL_EXECUTION", {
+            "cycle_id": cycle_id,
+            "message": "Executed locally on host — 0 external budget spent.",
+            "result": local_result,
+            "budget": bm.summary(),
+        })
         return
 
     await asyncio.sleep(0.5)
