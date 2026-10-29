@@ -23,7 +23,7 @@ load_dotenv()
 
 from orchestrator.bottleneck_sensor import is_bottlenecked
 from orchestrator.local_executor import local_executor
-from orchestrator.jrp_builder import build_jrp, build_jrp_manual
+from orchestrator.jrp_builder import build_jrp, build_jrp_direct
 from orchestrator.budget_manager import BudgetManager
 from orchestrator.verifier import verify_delivery
 from orchestrator.treasury import (
@@ -197,14 +197,15 @@ async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: f
 
     await asyncio.sleep(0.5)
 
-    # Step 2: Build JRP from task description
+    # Step 2: Build Free-Form JRP from task description
     try:
         jrp = build_jrp(task_description, bm.remaining * 0.6, cycle_id)
-    except Exception:
-        jrp = build_jrp_manual(
-            task_type="ocr_batch",
-            description=task_description,
-            item_count=2000,
+    except Exception as e:
+        print(f"[WARN] LLM JRP generation fallback: {e}")
+        jrp = build_jrp_direct(
+            task_description=task_description,
+            required_capabilities=["general_ai_execution"],
+            acceptance_rules=[{"type": "llm_judge", "criteria": "Satisfies task requirements"}],
             max_bid_usd=min(8.0, bm.remaining * 0.6),
             cycle_id=cycle_id,
         )
@@ -212,12 +213,22 @@ async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: f
     await broadcast("JRP_EMITTED", {"cycle_id": cycle_id, "jrp": jrp})
     await asyncio.sleep(0.5)
 
-    # Step 3: Send JRP to broker, collect bids
+    # Step 3: Send JRP to broker, collect bids by capability manifest
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(f"{BROKER_URL}/bid", json=jrp)
             resp.raise_for_status()
-            bids = resp.json()["bids"]
+            broker_resp = resp.json()
+            bids = broker_resp.get("bids", [])
+            broker_status = broker_resp.get("status")
+
+            if broker_status == "NO_CAPABLE_WORKERS" or not bids:
+                await broadcast("NO_CAPABLE_WORKERS", {
+                    "cycle_id": cycle_id,
+                    "message": broker_resp.get("message", "No registered workers satisfy required capabilities. Aborting with $0 spent."),
+                    "budget_state": bm.summary(),
+                })
+                return
     except Exception as e:
         await broadcast("ERROR", {"cycle_id": cycle_id, "message": f"Broker unreachable: {e}"})
         return
@@ -359,10 +370,10 @@ async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: f
 
 async def run_second_subtask(cycle_id: str, bm: BudgetManager):
     """Automatically fire a second JRP to demonstrate budget tracking."""
-    jrp2 = build_jrp_manual(
-        task_type="embed_batch",
-        description="Chunk and embed OCR output into vector store",
-        item_count=2000,
+    jrp2 = build_jrp_direct(
+        task_description="Extract and structure tabular summary from processed data",
+        required_capabilities=["data_extraction", "summarization"],
+        acceptance_rules=[{"type": "schema", "required_fields": ["summary", "key_findings"]}],
         max_bid_usd=min(5.0, bm.remaining * 0.6),
         cycle_id=cycle_id,
     )

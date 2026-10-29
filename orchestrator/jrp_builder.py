@@ -1,52 +1,55 @@
 """
-jrp_builder.py — Builds Job Request Packets from natural language via Groq LLM
+jrp_builder.py — Free-Form Job Request Packet (JRP) Builder
+------------------------------------------------------------
+Constructs technical JRPs from arbitrary natural-language tasks via Groq LLM.
+No predefined task-type enums. Derives required capabilities and verifiable acceptance rules.
 """
 import os
 import uuid
 import json
+from datetime import datetime, timezone
 from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+WORKER_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
-TASK_TYPE_MAP = {
-    "ocr": "ocr_batch",
-    "pdf": "ocr_batch",
-    "scrape": "scrape_batch",
-    "web": "scrape_batch",
-    "embed": "embed_batch",
-    "index": "embed_batch",
-    "embedding": "embed_batch",
-}
-
-SYSTEM_PROMPT = """You are ProcureAgent's task parser. Given a natural language task description and a max budget, 
-output a JSON Job Request Packet with EXACTLY these fields:
+SYSTEM_PROMPT = """You are ProcureAgent's autonomous task specification generator.
+Given any free-form natural language task description and an allocated budget, analyze the task and output a JSON Job Request Packet (JRP).
+You must analyze the task to determine what technical capabilities are needed and formulate verifiable acceptance rules.
+Output JSON with EXACTLY these fields:
 {
-  "task_type": one of ["ocr_batch", "scrape_batch", "embed_batch"],
-  "description": short technical description,
-  "input_manifest": { "item_count": integer, "avg_size_kb": integer },
-  "acceptance_criteria": { "min_items_processed": integer (95% of item_count), "output_format": "jsonl", "sha256_of_output_required": true },
-  "max_bid_usd": float (set equal to or slightly below the provided max budget for this sub-task),
+  "task_description": string (clear technical summary of the goal),
+  "required_capabilities": array of strings (e.g. ["document_ocr", "text_extraction"], ["python_coding", "unit_testable_functions"], ["web_research", "citation_verification"], ["data_extraction"]),
+  "acceptance_criteria_text": string (plain-language summary of criteria for the judge),
+  "acceptance_rules": [
+    // Include applicable rules based on task type:
+    // For structured output: {"type": "schema", "required_fields": ["..."]}
+    // For OCR/transcription: {"type": "cer_threshold", "max_cer": 0.05}
+    // For coding tasks: {"type": "unit_test", "test_suite_code": "def run_tests(): ..."}
+    // For web research: {"type": "citation_check", "required_keywords": ["..."]}
+    // Always include a judge rule for semantic validation: {"type": "llm_judge", "criteria": "..."}
+  ],
+  "max_bid_usd": float (must be <= provided max budget),
   "deadline_seconds": integer
 }
-Output ONLY valid JSON, no markdown, no explanation."""
+Output ONLY valid JSON, no markdown fences, no explanation outside JSON."""
 
 
 def build_jrp(task_description: str, max_budget_usd: float, cycle_id: str) -> dict:
-    """Use LLM to parse task and construct a JRP."""
-    prompt = f"Task: {task_description}\nMax budget for this sub-task: ${max_budget_usd:.2f}"
+    """Use live LLM API to parse free-form task into a structured JRP."""
+    prompt = f"TASK DESCRIPTION:\n{task_description}\n\nMAX ALLOCATED BUDGET: ${max_budget_usd:.2f}"
 
     response = client.chat.completions.create(
-        model=MODEL,
+        model=WORKER_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
-        max_tokens=512,
+        max_tokens=650,
     )
 
     raw = response.choices[0].message.content.strip()
@@ -63,47 +66,51 @@ def build_jrp(task_description: str, max_budget_usd: float, cycle_id: str) -> di
 
     parsed = json.loads(raw)
 
-    # Ensure max_bid_usd is valid and capped at max_budget_usd
+    # Validate and clamp max_bid_usd
     if not parsed.get("max_bid_usd") or float(parsed["max_bid_usd"]) <= 0:
         parsed["max_bid_usd"] = round(max_budget_usd, 2)
     else:
         parsed["max_bid_usd"] = min(round(float(parsed["max_bid_usd"]), 2), round(max_budget_usd, 2))
 
-    # Ensure min_items_processed in acceptance criteria is realistic (95% of item_count)
-    item_count = parsed.get("input_manifest", {}).get("item_count", 100)
-    if "acceptance_criteria" in parsed:
-        parsed["acceptance_criteria"]["min_items_processed"] = int(item_count * 0.95)
+    # Ensure required_capabilities is a non-empty list of normalized strings
+    caps = parsed.get("required_capabilities", [])
+    if isinstance(caps, str):
+        caps = [caps]
+    parsed["required_capabilities"] = [str(c).lower().strip() for c in caps if c]
+    if not parsed["required_capabilities"]:
+        parsed["required_capabilities"] = ["general_ai_execution"]
 
-    # Inject infrastructure fields
+    # Ensure acceptance_rules is a list
+    if not isinstance(parsed.get("acceptance_rules"), list):
+        parsed["acceptance_rules"] = []
+
+    # Inject infrastructure IDs
     parsed["jrp_id"] = str(uuid.uuid4())
     parsed["cycle_id"] = cycle_id
     parsed["status"] = "OPEN"
+    parsed["created_at"] = datetime.now(timezone.utc).isoformat()
 
     return parsed
 
 
-
-def build_jrp_manual(
-    task_type: str,
-    description: str,
-    item_count: int,
+def build_jrp_direct(
+    task_description: str,
+    required_capabilities: list[str],
+    acceptance_rules: list[dict],
     max_bid_usd: float,
     cycle_id: str,
-    deadline_seconds: int = 120,
+    deadline_seconds: int = 60,
 ) -> dict:
-    """Build a JRP directly without LLM (used in tests and simulation)."""
+    """Builds a structured JRP directly without LLM (used in unit tests and deterministic benchmark runs)."""
     return {
         "jrp_id": str(uuid.uuid4()),
         "cycle_id": cycle_id,
-        "task_type": task_type,
-        "description": description,
-        "input_manifest": {"item_count": item_count, "avg_size_kb": 200},
-        "acceptance_criteria": {
-            "min_items_processed": int(item_count * 0.95),
-            "output_format": "jsonl",
-            "sha256_of_output_required": True,
-        },
-        "max_bid_usd": max_bid_usd,
+        "task_description": task_description,
+        "required_capabilities": [c.lower().strip() for c in required_capabilities],
+        "acceptance_criteria_text": "Satisfy all specified acceptance rules",
+        "acceptance_rules": acceptance_rules,
+        "max_bid_usd": round(max_bid_usd, 2),
         "deadline_seconds": deadline_seconds,
         "status": "OPEN",
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }

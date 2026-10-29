@@ -1,44 +1,50 @@
 """
-broker/registry.py — Registered worker agents
+broker/registry.py — Registered worker agents & capability manifests
+-------------------------------------------------------------------
+Maintains registered workers with plain-language capabilities, ports, and PayPal accounts.
+Rogue worker is assigned a valid sandbox personal email to verify payment is strictly withheld.
 """
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "worker@sandbox.paypal.com")
+WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
+# Valid sandbox personal email for rogue adversary (asserted never paid in tests)
+ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", WORKER_PAYPAL_EMAIL)
 
 WORKER_REGISTRY = [
     {
         "worker_id": "ocr-worker-01",
         "name": "OCR Specialist Alpha",
-        "capabilities": ["ocr_batch"],
+        "capabilities": ["document_ocr", "text_extraction", "receipt_transcription", "tesseract"],
         "port": int(os.getenv("OCR_WORKER_PORT", 8002)),
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
-        "reputation_score": 0.95,
+        "pricing_model": "compute_seconds",
     },
     {
-        "worker_id": "ocr-worker-02",
-        "name": "OCR Specialist Beta",
-        "capabilities": ["ocr_batch"],
-        "port": int(os.getenv("SCRAPE_WORKER_PORT", 8003)),
+        "worker_id": "code-worker-01",
+        "name": "Python Code Generation Specialist",
+        "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing"],
+        "port": int(os.getenv("CODE_WORKER_PORT", 8003)),
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
-        "reputation_score": 0.88,
+        "pricing_model": "per_spec",
     },
     {
-        "worker_id": "embed-worker-01",
-        "name": "Embedding & Indexing Specialist",
-        "capabilities": ["embed_batch", "scrape_batch"],
-        "port": int(os.getenv("EMBED_WORKER_PORT", 8004)),
+        "worker_id": "llm-worker-01",
+        "name": "LLM Synthesis & Extraction Specialist",
+        "capabilities": ["data_extraction", "summarization", "reasoning", "general_ai_execution", "web_research"],
+        "port": int(os.getenv("LLM_WORKER_PORT", 8004)),
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
-        "reputation_score": 0.92,
+        "pricing_model": "token_metered",
     },
     {
         "worker_id": "rogue-worker-01",
         "name": "Rogue Worker (Adversarial)",
-        "capabilities": ["ocr_batch"],
+        "capabilities": ["document_ocr", "python_coding", "data_extraction", "web_research"],
         "port": int(os.getenv("ROGUE_WORKER_PORT", 8005)),
-        "worker_paypal_email": WORKER_PAYPAL_EMAIL,
-        "reputation_score": 0.50,
+        "worker_paypal_email": ROGUE_PAYPAL_EMAIL,
         "is_adversarial": True,
+        "pricing_model": "underbid_fixed",
     },
 ]
