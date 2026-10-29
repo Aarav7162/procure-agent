@@ -57,10 +57,10 @@ Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to retu
 - **Explainable Token Bidding**: Bids are computed from token volume, model API rates, and an operational fee.
 - **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions.
 
-### Task Family 3: Research & Extraction (`llm-worker-01`)
-- **Architecture**: **LLM-Only (No Fetching Daemon)**.
-- **Justification**: There is no browser crawler or headless scraping daemon in this project. `llm-worker-01` uses parametric LLM reasoning (`openai/gpt-oss-120b`) to extract and synthesize research, emitting documentation URLs.
-- **Verification**: The verifier performs live HTTP GET checks against cited URLs to ensure links are live (HTTP 200) and contain claimed fact keywords.
+### Task Family 3: LLM-Generated Answers with Citation Checks (`llm-worker-01`)
+- **Architecture**: **LLM-generated answers with citation checks (No Fetching or Research Daemon)**.
+- **Scope & Boundary**: This family produces structured LLM-generated answers using parametric model intelligence (`openai/gpt-oss-120b`), NOT live web research or browser-based scraping. No crawler, headless browser, or fetching daemon exists.
+- **Verification**: The verifier validates citations via live HTTP GET requests to ensure referenced documentation links return HTTP 200 and contain claimed fact keywords.
 
 ---
 
@@ -71,12 +71,23 @@ To ensure agent bids are not arbitrary fixtures, autonomous worker agents price 
 $$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \max\left(F_{\text{min}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)\right)$$
 
 Where:
-- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.50$/1M input, $\$1.50$/1M output $\approx \$0.0008$).
+- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.50$/1M input, $\$1.50$/1M output).
 - **$M_{\text{compute}}$ (Risk & Variance Multiplier)**: $1.25$ (covers token count variance, network latency, and retry overhead).
 - **$F_{\text{min}}$ (Minimum Operational Fee)**:
-  - $\$0.15$ for `llm-worker-01` (covers agent uptime, availability readiness).
-  - $\$0.20$ for `code-worker-01` (covers sandbox execution readiness and AST compilation).
-- **Result**: An LLM call costing $\approx \$0.0008$ cleanly and transparently bids $\$0.20 - \$0.25$, explaining the real-world operational margin of autonomous agent services.
+  - $\$0.15$ for `llm-worker-01` (agent uptime, availability readiness).
+  - $\$0.20$ for `code-worker-01` (sandbox execution readiness and AST compilation).
+
+### Plain Truth: The Minimum Fee Dominates
+**In all LLM-powered tasks, the minimum operational fee ($F_{\text{min}}$) completely dominates the raw API token cost ($C_{\text{api}}$).** 
+Because modern inference platforms price tokens at fractions of a cent per request ($\approx \$0.0004 - \$0.0008$), the raw compute cost accounts for less than 1% of the total bid. The bid price is fundamentally established by the minimum reservation fee ($0.15 - $0.20) required to maintain worker availability, sandboxed process lifecycle, and financial reservation overhead.
+
+### Computed Bids for Typical Tasks
+| Task Category | Typical Workload & Specs | Raw Compute Cost ($C_{\text{api}}$) | Operational Fee ($F_{\text{min}}$) | Computed Bid ($\text{Bid}_{\text{USD}}$) | Dominant Factor |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **LLM Synthesis** | 150 input tokens, 350 output tokens (`gpt-oss-120b`) | $\$0.000600$ | $\$0.15$ | **$\$0.15$** | **Minimum Fee (99.6%)** |
+| **Python Code Gen** | 100 input tokens, 250 output tokens (`gpt-oss-120b`) | $\$0.000425$ | $\$0.20$ | **$\$0.20$** | **Minimum Fee (99.8%)** |
+| **OCR Alpha** | Raw Tesseract PSM 3 (avg 2.0s compute @ $0.25/s) | $\$0.500000$ (compute) | $\$0.20$ | **$\$0.70$** | **Compute Time (71.4%)** |
+| **OCR Beta** | Binarized Tesseract PSM 6 (avg 2.5s compute @ $0.18/s) | $\$0.450000$ (compute) | $\$0.20$ | **$\$0.65$** | **Compute Time (69.2%)** |
 
 ---
 
@@ -97,15 +108,15 @@ Where:
 
 ## 6. Worker Registry & PayPal Sandbox Accounts
 
-Each worker operates under a distinct, isolated PayPal sandbox account. The rogue worker has an independent account, and tests assert that $0.00 is ever sent to it.
+Each worker operates under a distinct, isolated PayPal sandbox account. **No two workers share an account.**
 
 | Worker ID | Name | Role | PayPal Sandbox Account |
 | :--- | :--- | :--- | :--- |
 | **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | `sb-s8vke53470365@business.example.com` |
 | **ocr-worker-01** | OCR Specialist Alpha | Primary OCR (Raw PSM 3) | `sb-sqcdl53128062@personal.example.com` |
 | **ocr-worker-02** | OCR Specialist Beta | Second OCR (Binarized PSM 6) | `sb-shusq53615721@personal.example.com` |
-| **code-worker-01** | Python Code Specialist | Code Generation | `sb-sqcdl53128062@personal.example.com` *(Pending user account)* |
-| **llm-worker-01** | LLM Synthesis Specialist | Extraction & Synthesis | `sb-kgyi653615592@personal.example.com` |
+| **code-worker-01** | Python Code Specialist | Code Generation | `sb-bef9t53614820@personal.example.com` |
+| **llm-worker-01** | LLM Synthesis Specialist | LLM Answers & Citation Verification | `sb-kgyi653615592@personal.example.com` |
 | **rogue-worker-01** | Rogue Worker (Adversary) | Defective Submissions | `sb-a43fio53613334@personal.example.com` *(Asserted $0.00 Paid)* |
 
 ---

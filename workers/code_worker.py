@@ -24,7 +24,7 @@ app = FastAPI(title="Real Python Code Generation Specialist")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 WORKER_ID = "code-worker-01"
-CODE_WORKER_PAYPAL_EMAIL = os.getenv("CODE_WORKER_PAYPAL_EMAIL", os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com"))
+CODE_WORKER_PAYPAL_EMAIL = os.getenv("CODE_WORKER_PAYPAL_EMAIL", "sb-bef9t53614820@personal.example.com")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 

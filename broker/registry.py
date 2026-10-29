@@ -12,7 +12,7 @@ load_dotenv()
 WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
 OCR_BETA_PAYPAL_EMAIL = os.getenv("OCR_BETA_PAYPAL_EMAIL", "sb-shusq53615721@personal.example.com")
 LLM_WORKER_PAYPAL_EMAIL = os.getenv("LLM_WORKER_PAYPAL_EMAIL", "sb-kgyi653615592@personal.example.com")
-CODE_WORKER_PAYPAL_EMAIL = os.getenv("CODE_WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
+CODE_WORKER_PAYPAL_EMAIL = os.getenv("CODE_WORKER_PAYPAL_EMAIL", "sb-bef9t53614820@personal.example.com")
 ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", "sb-a43fio53613334@personal.example.com")
 
 WORKER_REGISTRY = [
