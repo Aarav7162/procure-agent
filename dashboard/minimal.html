@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProcureAgent — Live Event Feed</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #121214;
+      --card: #1c1c1e;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --accent: #5e6ad2;
+      --paypal-blue: #003087;
+      --success: #30d158;
+      --danger: #ff453a;
+      --warning: #ffd60a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(94, 106, 210, 0.2);
+      color: #8b96f5;
+      border: 1px solid rgba(94, 106, 210, 0.3);
+      letter-spacing: 0.5px;
+    }
+    .status-pill {
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(48, 209, 88, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    /* Controls */
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    textarea, input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    textarea:focus, input:focus { outline: none; border-color: var(--accent); }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: rgba(255, 69, 58, 0.15); color: var(--danger); border: 1px solid rgba(255, 69, 58, 0.3); }
+    .btn-secondary:hover { background: rgba(255, 69, 58, 0.25); }
+    .btn-verify { background: rgba(48, 209, 88, 0.15); color: var(--success); border: 1px solid rgba(48, 209, 88, 0.3); margin-top: 12px; }
+
+    /* Budget gauge */
+    .budget-metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .budget-metric:last-child { border-bottom: none; }
+    .metric-val { font-weight: 600; font-family: monospace; }
+    .progress-bar-bg {
+      height: 8px;
+      background: var(--card);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+      transition: width 0.3s ease;
+    }
+
+    /* Event stream */
+    #event-feed {
+      height: calc(100vh - 160px);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 6px;
+    }
+    .event-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .event-type {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .event-time { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+    .event-body { font-size: 13px; color: #d4d4d8; }
+
+    /* Event variants */
+    .event-JRP_EMITTED { border-left: 3px solid var(--accent); }
+    .event-BID_AWARDED { border-left: 3px solid #64d2ff; }
+    .event-BUDGET_RESERVED { border-left: 3px solid var(--warning); }
+    .event-TWO_STAGE_VERIFICATION { border-left: 3px solid #bf5af2; }
+    .event-PAYMENT_BLOCKED { border-left: 3px solid var(--danger); background: rgba(255, 69, 58, 0.05); }
+    .event-TASK_REALLOCATING { border-left: 3px solid var(--warning); background: rgba(255, 214, 10, 0.05); }
+    .event-PAYOUT_SENT { border-left: 3px solid #0070ba; background: rgba(0, 112, 186, 0.08); }
+
+    .verification-badges {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .v-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .v-pass { background: rgba(48, 209, 88, 0.2); color: var(--success); border: 1px solid rgba(48, 209, 88, 0.4); }
+    .v-fail { background: rgba(255, 69, 58, 0.2); color: var(--danger); border: 1px solid rgba(255, 69, 58, 0.4); }
+
+    /* Ledger table */
+    .ledger-table {
+      width: 100%;
+      font-size: 11px;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .ledger-table th { text-align: left; color: var(--text-muted); padding: 6px 4px; border-bottom: 1px solid var(--border); }
+    .ledger-table td { padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-family: monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1 style="font-size: 18px; font-weight: 700;">ProcureAgent</h1>
+      <span class="badge">Phase 2.5 Live Feed</span>
+    </div>
+    <div id="conn-pill" class="status-pill">
+      <span class="status-dot"></span>
+      <span id="conn-status">Connecting WebSocket...</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Panel 1: Controls -->
+    <div>
+      <div class="card">
+        <h2>Submit Task</h2>
+        <div class="form-group">
+          <label>Task Description</label>
+          <textarea id="task-desc" rows="3">Process 2000 scanned tax forms with OCR</textarea>
+        </div>
+        <div class="form-group">
+          <label>Max Budget ($ USD)</label>
+          <input type="number" id="task-budget" value="15.00" step="1.00">
+        </div>
+        <button id="btn-submit" class="btn btn-primary" onclick="submitTask()">Deploy Autonomous Task</button>
+        <button id="btn-attack" class="btn btn-secondary" onclick="triggerRogueAttack()">Simulate Rogue Attack</button>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h2>Budget Invariant (S + R &le; B)</h2>
+        <div class="progress-bar-bg">
+          <div id="budget-progress" class="progress-bar-fill"></div>
+        </div>
+        <div class="budget-metric">
+          <span>Spent (S)</span>
+          <span id="metric-spent" class="metric-val">$0.00</span>
+        </div>
+        <div class="budget-metric">
+          <span>Reserved (R)</span>
+          <span id="metric-reserved" class="metric-val">$0.00</span>
+        </div>
+        <div class="budget-metric">
+          <span>Available (B - (S+R))</span>
+          <span id="metric-available" class="metric-val" style="color: var(--success);">$15.00</span>
+        </div>
+        <div class="budget-metric">
+          <span>Authorized Cap (B)</span>
+          <span id="metric-max" class="metric-val">$15.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 2: Live Event Stream -->
+    <div class="card">
+      <h2>Live Event Stream</h2>
+      <div id="event-feed">
+        <div class="event-card">
+          <div class="event-header">
+            <span class="event-type" style="color: var(--accent);">SYSTEM_READY</span>
+            <span class="event-time">--:--:--</span>
+          </div>
+          <div class="event-body">Ready for autonomous procurement tasks. WebSocket listener initialized.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Tamper-Evident Ledger -->
+    <div>
+      <div class="card">
+        <h2>Tamper-Evident Ledger</h2>
+        <div id="ledger-entries">
+          <table class="ledger-table">
+            <thead>
+              <tr>
+                <th>Worker</th>
+                <th>Amt</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-body">
+              <tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No transactions yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn-verify" onclick="verifyLedger()">Verify Ledger Hash Chain</button>
+        <div id="verify-result" style="font-size: 11px; margin-top: 8px; color: var(--text-muted);"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    const feed = document.getElementById("event-feed");
+
+    function connectWS() {
+      const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.hostname || "127.0.0.1";
+      const port = window.location.port || "8000";
+      const wsUrl = `${proto}//${host}:${port}/ws`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById("conn-status").innerText = "WebSocket Connected";
+        document.getElementById("conn-pill").style.borderColor = "rgba(48, 209, 88, 0.4)";
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleEvent(data);
+        } catch (e) {
+          console.error("WS Parse Error", e);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById("conn-status").innerText = "Disconnected (reconnecting...)";
+        document.getElementById("conn-pill").style.borderColor = "rgba(255, 69, 58, 0.4)";
+        setTimeout(connectWS, 2000);
+      };
+    }
+
+    function handleEvent(data) {
+      const type = data.event || "UNKNOWN";
+      const time = data.ts ? new Date(data.ts).toLocaleTimeString() : new Date().toLocaleTimeString();
+      
+      const card = document.createElement("div");
+      card.className = `event-card event-${type}`;
+
+      let contentHtml = "";
+
+      if (type === "TASK_RECEIVED") {
+        contentHtml = `Task: "<b>${data.description}</b>" | Cap: $${data.max_budget_usd}`;
+      } else if (type === "BOTTLENECK_CHECK") {
+        contentHtml = `Bottleneck detected: <b>${data.bottlenecked}</b> (${data.reason})`;
+      } else if (type === "JRP_EMITTED") {
+        contentHtml = `JRP constructed for <b>${data.jrp?.task_type}</b>. Manifest: ${data.jrp?.input_manifest?.item_count} items, Max Bid: $${data.jrp?.max_bid_usd}`;
+      } else if (type === "BIDS_RECEIVED") {
+        const bids = data.bids || [];
+        contentHtml = `Received ${bids.length} bids: ` + bids.map(b => `${b.worker_id}: $${b.bid_usd || 'N/A'}`).join(", ");
+      } else if (type === "BID_AWARDED") {
+        contentHtml = `Awarded to <b>${data.winner?.worker_id}</b> for $${data.winner?.bid_usd?.toFixed(2)}`;
+      } else if (type === "BUDGET_RESERVED") {
+        contentHtml = `Reserved $${data.amount_usd?.toFixed(2)} for ${data.worker_id} (ID: ${data.reservation_id})`;
+        updateBudgetUI(data.budget_state);
+      } else if (type === "DELIVERY_RECEIVED") {
+        contentHtml = `Received output from <b>${data.worker_id}</b> (${data.delivery?.items_processed} items). SHA-256: <code>${data.delivery?.sha256_hash?.substring(0, 16)}...</code>`;
+      } else if (type === "TWO_STAGE_VERIFICATION") {
+        const report = data.report || {};
+        const intOk = report.integrity?.match;
+        const accOk = data.verified;
+        contentHtml = `
+          <div>Two-Stage Verification Report for <b>${data.worker_id}</b>:</div>
+          <div class="verification-badges">
+            <span class="v-badge ${intOk ? 'v-pass' : 'v-fail'}">Stage 1 Integrity: ${intOk ? 'PASSED' : 'FAILED'}</span>
+            <span class="v-badge ${accOk ? 'v-pass' : 'v-fail'}">Stage 2 Acceptance: ${accOk ? 'PASSED' : 'FAILED'}</span>
+          </div>
+          <div style="font-size: 11px; margin-top: 6px; color: var(--text-muted);">${report.message || ''}</div>
+        `;
+      } else if (type === "PAYMENT_BLOCKED") {
+        contentHtml = `<span style="color: var(--danger); font-weight: 600;">PAYMENT WITHHELD:</span> ${data.message} | Reservation ${data.reservation_released} released.`;
+        updateBudgetUI(data.budget_state);
+      } else if (type === "TASK_REALLOCATING") {
+        contentHtml = `<span style="color: var(--warning); font-weight: 600;">AUTONOMOUS REALLOCATION:</span> ${data.message}`;
+      } else if (type === "PAYOUT_SENT") {
+        const p = data.payout || {};
+        contentHtml = `
+          <div style="color: #64d2ff; font-weight: 700;">PAYPAL SETTLEMENT COMPLETE</div>
+          <div>Batch ID: <code>${p.payout_batch_id}</code></div>
+          <div>Amount: <b>$${p.amount_usd?.toFixed(2)}</b> | Status: <b>${p.final_status || p.status}</b></div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Worker: ${p.worker_email}</div>
+        `;
+        updateBudgetUI(data.budget);
+        refreshLedger();
+      } else {
+        contentHtml = JSON.stringify(data);
+      }
+
+      card.innerHTML = `
+        <div class="event-header">
+          <span class="event-type">${type}</span>
+          <span class="event-time">${time}</span>
+        </div>
+        <div class="event-body">${contentHtml}</div>
+      `;
+
+      feed.insertBefore(card, feed.firstChild);
+    }
+
+    function updateBudgetUI(b) {
+      if (!b) return;
+      document.getElementById("metric-spent").innerText = `$${(b.spent_usd || 0).toFixed(2)}`;
+      document.getElementById("metric-reserved").innerText = `$${(b.reserved_usd || 0).toFixed(2)}`;
+      document.getElementById("metric-available").innerText = `$${(b.available_usd || 0).toFixed(2)}`;
+      document.getElementById("metric-max").innerText = `$${(b.max_usd || 15).toFixed(2)}`;
+      document.getElementById("budget-progress").style.width = `${Math.min(100, b.pct_used || 0)}%`;
+    }
+
+    async function submitTask() {
+      const desc = document.getElementById("task-desc").value;
+      const budget = parseFloat(document.getElementById("task-budget").value) || 15.0;
+      
+      const res = await fetch("/task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: desc, max_budget_usd: budget })
+      });
+      const data = await res.json();
+      console.log("Task submitted:", data);
+    }
+
+    async function triggerRogueAttack() {
+      document.getElementById("task-desc").value = "OCR verification test with adversarial bidding";
+      await submitTask();
+    }
+
+    async function refreshLedger() {
+      try {
+        const res = await fetch("/ledger");
+        const rows = await res.json();
+        const tbody = document.getElementById("ledger-body");
+        if (!rows || rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No transactions</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>${r.worker_id}</td>
+            <td>$${r.bid_usd.toFixed(2)}</td>
+            <td style="color: ${r.status.includes('SUCCESS') ? 'var(--success)' : 'var(--warning)'};">${r.status.split(' ')[0]}</td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        console.error("Ledger fetch error", e);
+      }
+    }
+
+    async function verifyLedger() {
+      const el = document.getElementById("verify-result");
+      el.innerText = "Checking cryptographic hash chain...";
+      try {
+        const res = await fetch("/ledger/verify");
+        const data = await res.json();
+        if (data.is_valid) {
+          el.innerHTML = `<span style="color: var(--success);">✔ ${data.description}</span>`;
+        } else {
+          el.innerHTML = `<span style="color: var(--danger);">✘ ${data.description}</span>`;
+        }
+      } catch (e) {
+        el.innerText = "Error verifying ledger: " + e;
+      }
+    }
+
+    // Initialize
+    connectWS();
+    refreshLedger();
+  </script>
+</body>
+</html>

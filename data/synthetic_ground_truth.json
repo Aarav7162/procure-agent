@@ -1,0 +1,19 @@
+{
+  "ocr_batch": {
+    "required_fields": ["doc_id", "text", "confidence"],
+    "min_confidence": 0.85,
+    "forbidden_patterns": ["BOGUS", "CORRUPTED", "EMPTY_PAYLOAD", "FABRICATED"],
+    "ground_truth_snippets": [
+      "Extracted text from page 0 of scanned document.",
+      "Extracted text from page 1 of scanned document.",
+      "Extracted text from page 2 of scanned document.",
+      "Extracted text from page 3 of scanned document.",
+      "Extracted text from page 4 of scanned document."
+    ]
+  },
+  "embed_batch": {
+    "required_fields": ["chunk_id", "embedding_dim", "vector", "text"],
+    "min_dim": 128,
+    "forbidden_patterns": ["BOGUS", "CORRUPTED", "EMPTY_PAYLOAD"]
+  }
+}

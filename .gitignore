@@ -1,0 +1,44 @@
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+
+# Audit ledger databases and secret chain anchors
+audit/*.db
+audit/*.db-wal
+audit/*.db-shm
+audit/latest_chain_hash.txt
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
