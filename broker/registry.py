@@ -12,6 +12,7 @@ load_dotenv()
 WORKER_PAYPAL_EMAIL = os.getenv("WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
 OCR_BETA_PAYPAL_EMAIL = os.getenv("OCR_BETA_PAYPAL_EMAIL", "sb-shusq53615721@personal.example.com")
 LLM_WORKER_PAYPAL_EMAIL = os.getenv("LLM_WORKER_PAYPAL_EMAIL", "sb-kgyi653615592@personal.example.com")
+CODE_WORKER_PAYPAL_EMAIL = os.getenv("CODE_WORKER_PAYPAL_EMAIL", "sb-sqcdl53128062@personal.example.com")
 ROGUE_PAYPAL_EMAIL = os.getenv("ROGUE_PAYPAL_EMAIL", "sb-a43fio53613334@personal.example.com")
 
 WORKER_REGISTRY = [
@@ -36,8 +37,8 @@ WORKER_REGISTRY = [
         "name": "Python Code Generation Specialist",
         "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing"],
         "port": int(os.getenv("CODE_WORKER_PORT", 8003)),
-        "worker_paypal_email": WORKER_PAYPAL_EMAIL,
-        "pricing_model": "per_spec",
+        "worker_paypal_email": CODE_WORKER_PAYPAL_EMAIL,
+        "pricing_model": "token_metered_llm",
     },
     {
         "worker_id": "llm-worker-01",

@@ -21,7 +21,7 @@ To eliminate self-collusion, confirmation bias, and architectural blindspots, Pr
 
 | Role | Model Identifier | Provider / Platform | Purpose & Justification |
 | :--- | :--- | :--- | :--- |
-| **Worker Agent** | `openai/gpt-oss-120b` | Groq Platform | High-capacity reasoning and structured generation engine used by `llm-worker-01` to execute complex tasks, extract data, and synthesize specifications. |
+| **Worker Agents** | `openai/gpt-oss-120b` | Groq Platform | High-capacity reasoning and structured generation engine used by `llm-worker-01` and `code-worker-01` to execute complex tasks, write code, and synthesize specifications. |
 | **Acceptance Judge** | `qwen/qwen3.8-27b` | Groq Platform | Independent, critical evaluator configured with adversarial system prompts to detect flaws, omissions, and hallucinations. |
 
 ### Model Diversity & Quote Verification Defense
@@ -44,48 +44,83 @@ The following 11 models are verified active and accessible on the platform:
 
 ---
 
-## 3. Code Sandbox: Protections and Limits
+## 3. Worker Specializations & Differentiated Engines
 
-When evaluating code generation deliveries (Task Family 2), ProcureAgent executes candidate code against a hidden unit test suite.
+### Task Family 1: Document OCR (Alpha vs. Beta)
+Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to return mock fixtures if scans are missing. They differ genuinely in algorithmic preprocessing and compute profiles:
+- **`ocr-worker-01` (Alpha)**: Raw Tesseract engine with Page Segmentation Mode 3 (fully automatic page segmentation). Faster compute (~2.0s), best for standard structured documents.
+- **`ocr-worker-02` (Beta)**: Advanced Preprocessing Pipeline: Grayscale normalization $\to$ 2.0x Contrast expansion $\to$ Edge Sharpening $\to$ Otsu-style Binarization $\to$ Tesseract PSM 6 (single uniform text block). Higher compute latency (~2.5s), superior accuracy on noisy or degraded scans.
+- **Scans Directory**: `data/real_scans/` (requires `doc_01.png` + human-typed companion transcript `doc_01.txt`). Verified via Character Error Rate (CER Levenshtein $\le 5\%$).
 
-### Protections
-- **Process Isolation**: The code and test suite are written to an isolated temporary file and executed in a dedicated operating system child process via `subprocess.run([sys.executable, ...], capture_output=True)`.
-- **Hard Execution Timeout**: Enforces a strict `timeout_sec = 3.0s`. Infinite loops, network stalls, or CPU exhaustion attacks are terminated immediately with a non-zero exit code.
-- **Ephemeral Lifecycle**: Scratch files are generated via `tempfile.NamedTemporaryFile` and deleted immediately in a guaranteed `finally:` block, preventing file leakage.
-- **Zero Information Leakage**: The unit test assertions, edge-case checks, and hidden test inputs are never provided in the public JRP (Job Request Package). Workers cannot hardcode test values or overfit.
-- **Captive I/O**: `stdout` and `stderr` are captured in memory buffers (capped at 500 characters in logs) to prevent terminal flooding or log injection attacks.
+### Task Family 2: Python Code Generation (`code-worker-01`)
+- **Real LLM Generation**: Uses live Groq API inference (`openai/gpt-oss-120b`) to synthesize production Python code.
+- **Explainable Token Bidding**: Bids are computed from token volume, model API rates, and an operational fee.
+- **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions.
 
-### Limits & Boundary Conditions
-- **Local Runtime Confinement**: The sandbox relies on Python process separation without OS-level kernel isolation (e.g., Docker, firejail, or gVisor). Code currently executes with the permissions of the host process.
-- **Standard Library Only**: Candidate code is expected to be algorithmic and self-contained; external network calls during unit test evaluation are not permitted.
-- **Single-Thread Target**: Multi-threaded or asynchronous worker scripts that spawn persistent background daemons can exceed the execution timeout.
+### Task Family 3: Research & Extraction (`llm-worker-01`)
+- **Architecture**: **LLM-Only (No Fetching Daemon)**.
+- **Justification**: There is no browser crawler or headless scraping daemon in this project. `llm-worker-01` uses parametric LLM reasoning (`openai/gpt-oss-120b`) to extract and synthesize research, emitting documentation URLs.
+- **Verification**: The verifier performs live HTTP GET checks against cited URLs to ensure links are live (HTTP 200) and contain claimed fact keywords.
 
 ---
 
-## 4. Worker Registry & PayPal Sandbox Accounts
+## 4. Economic Model: Explainable Bidding & Margin Rules
 
-Each worker operates under a distinct, isolated PayPal sandbox account. The adversarial rogue worker has an independent account, and tests assert that $0.00 is ever sent to it.
+To ensure agent bids are not arbitrary fixtures, autonomous worker agents price machine labor using an explicit economic model:
+
+$$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \max\left(F_{\text{min}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)\right)$$
+
+Where:
+- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.50$/1M input, $\$1.50$/1M output $\approx \$0.0008$).
+- **$M_{\text{compute}}$ (Risk & Variance Multiplier)**: $1.25$ (covers token count variance, network latency, and retry overhead).
+- **$F_{\text{min}}$ (Minimum Operational Fee)**:
+  - $\$0.15$ for `llm-worker-01` (covers agent uptime, availability readiness).
+  - $\$0.20$ for `code-worker-01` (covers sandbox execution readiness and AST compilation).
+- **Result**: An LLM call costing $\approx \$0.0008$ cleanly and transparently bids $\$0.20 - \$0.25$, explaining the real-world operational margin of autonomous agent services.
+
+---
+
+## 5. Code Sandbox: Protections and Limits
+
+### Protections
+- **Process Isolation**: The candidate code and test suite are written to an isolated temporary file and executed in a dedicated child process via `subprocess.run([sys.executable, ...], capture_output=True)`.
+- **Hard Execution Timeout**: Enforces a strict `timeout_sec = 3.0s`. Infinite loops, network stalls, or CPU exhaustion attacks are terminated immediately with a non-zero exit code.
+- **Ephemeral Lifecycle**: Scratch files are generated via `tempfile.NamedTemporaryFile` and deleted immediately in a guaranteed `finally:` block, preventing file leakage.
+- **Zero Information Leakage**: The unit test assertions, edge-case checks, and hidden test inputs are never provided in the public JRP. Workers cannot hardcode test values or overfit.
+- **Captive I/O**: `stdout` and `stderr` are captured in memory buffers to prevent terminal flooding or log injection attacks.
+
+### Limits
+- **Local Confinement**: Python child process isolation without kernel-level containerization (e.g. Docker/gVisor).
+- **Standard Library Only**: Candidate code is expected to be algorithmic and self-contained; external network calls during unit test evaluation are not permitted.
+
+---
+
+## 6. Worker Registry & PayPal Sandbox Accounts
+
+Each worker operates under a distinct, isolated PayPal sandbox account. The rogue worker has an independent account, and tests assert that $0.00 is ever sent to it.
 
 | Worker ID | Name | Role | PayPal Sandbox Account |
 | :--- | :--- | :--- | :--- |
 | **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | `sb-s8vke53470365@business.example.com` |
-| **ocr-worker-01** | OCR Specialist Alpha | Primary OCR | `sb-sqcdl53128062@personal.example.com` |
-| **ocr-worker-02** | OCR Specialist Beta | Second OCR Worker | `sb-shusq53615721@personal.example.com` |
-| **code-worker-01** | Python Code Specialist | Code Generation | `sb-sqcdl53128062@personal.example.com` |
+| **ocr-worker-01** | OCR Specialist Alpha | Primary OCR (Raw PSM 3) | `sb-sqcdl53128062@personal.example.com` |
+| **ocr-worker-02** | OCR Specialist Beta | Second OCR (Binarized PSM 6) | `sb-shusq53615721@personal.example.com` |
+| **code-worker-01** | Python Code Specialist | Code Generation | `sb-sqcdl53128062@personal.example.com` *(Pending user account)* |
 | **llm-worker-01** | LLM Synthesis Specialist | Extraction & Synthesis | `sb-kgyi653615592@personal.example.com` |
-| **rogue-worker-01** | Rogue Worker (Adversary) | Defective Submissions | `sb-a43fio53613334@personal.example.com` *(Asserted Never Paid)* |
+| **rogue-worker-01** | Rogue Worker (Adversary) | Defective Submissions | `sb-a43fio53613334@personal.example.com` *(Asserted $0.00 Paid)* |
 
 ---
 
-## 5. Real vs. Simulated Accounting
+## 7. Verified Live Adversarial Flow (`PAYOUT_MODE=live`)
 
-- **REAL**:
-  - Live PayPal Sandbox Payout API calls (`/v1/payments/payouts`) returning real PayPal batch IDs with asynchronous status polling (`PROCESSING` $\to$ `SUCCESS`).
-  - Real Groq LLM token processing for both Worker (`openai/gpt-oss-120b`) and Judge (`qwen/qwen3.8-27b`).
-  - Character Error Rate Levenshtein calculation against human ground truth.
-  - Subprocess execution with hidden assertions.
-  - Live HTTP citation resolution and content scraping.
-  - SQLite `BEGIN IMMEDIATE` atomic financial ledger.
-- **SIMULATED**:
-  - Offline fallback payout mode if PayPal API is unreachable in test mode (visibly marked `SIMULATED` in batch ID and ledger notes).
-  - Synthetic scans if real scans are not provided.
+In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py`):
+1. **Rogue Underbids**: Bids $\$0.35$ (undercutting market rate $\$0.45$) and is awarded the task.
+2. **Budget Reserved**: $\$0.35$ reserved for Rogue (`res_943a950648a8`).
+3. **Defect Caught**: Rogue submits code returning `-1.0` on non-positive amounts; fails hidden unit test `assert calculate_tax(0.0) == 0.0`.
+4. **Payment Withheld & Reservation Released**: Rogue's reservation is released back to the treasury pool. Rogue receives **$\$0.00$**.
+5. **Dynamic Reallocation**: Task is dynamically reassigned to `code-worker-01`.
+6. **Delivery & Verification**: Honest worker delivers verified code via live Groq LLM inference; passes two-layer verification.
+7. **Real PayPal Settlement**: Real PayPal Payout submitted in `PAYOUT_MODE=live`.
+   - **Batch ID**: `WPWDV6FSG5ACN`
+   - **Final Reconciled Status**: `PAYOUT_SUCCESS`
+   - **Rogue Paid**: `$\$0.00$`
+   - **Honest Worker Paid**: `$\$0.45$`

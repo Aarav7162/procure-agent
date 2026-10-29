@@ -60,9 +60,13 @@ async def bid(jrp: dict):
     est_input_tokens = estimate_tokens(task_desc + " " + input_text)
     est_output_tokens = 350  # Average expected output
 
-    # Token-metered pricing: base cost + 25% compute margin (min bid $0.25)
+    # EXPLAINABLE MARGIN RULE FOR AUTONOMOUS MACHINE LABOR:
+    #   Raw API Token Cost:     C_api = (est_input_tokens * P_in + est_output_tokens * P_out)
+    #   Compute Risk Multiplier: M = 1.25 (25% buffer for token variance, retries, and network egress)
+    #   Minimum Operational Fee: F_min = $0.15 (covers agent uptime, availability readiness, sandbox maintenance)
+    #   Bid Formula:            Bid = min(max_bid, round(max(F_min, (C_api * M) + F_min), 2))
     raw_cost = GLOBAL_API_METER.calculate_cost(GROQ_MODEL, est_input_tokens, est_output_tokens)
-    bid_price = max(0.25, round(raw_cost * 1.25 + 0.15, 2))
+    bid_price = max(0.15, round(raw_cost * 1.25 + 0.15, 2))
 
     max_bid = float(jrp.get("max_bid_usd", 5.0))
     if bid_price > max_bid:
@@ -74,6 +78,7 @@ async def bid(jrp: dict):
         "bid_usd": bid_price,
         "estimated_seconds": 2.5,
         "estimated_tokens": est_input_tokens + est_output_tokens,
+        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.15 min_fee = ${bid_price:.2f}",
         "capability_proof": [f"groq-{GROQ_MODEL}", "token-metered-pricing"],
         "reputation_score": 0.98,
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
