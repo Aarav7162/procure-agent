@@ -1,0 +1,224 @@
+{
+  "title": "Autonomous Code Bounty Procurement & Settlement",
+  "description": "Simulated CI failure triggers autonomous procurement. Rogue worker underbids ($0.18) and is blocked by sandboxed hidden tests ($0.00 paid). Dynamic reallocation to honest worker (code-worker-01) settles via real PayPal Sandbox API.",
+  "metadata": {
+    "target_repo": "demo_repos/billing_engine",
+    "bug_type": "Month-end rollover ValueError (Jan 31 -> Feb 28 clamping)",
+    "payout_mode": "live",
+    "paypal_batch_id": "S52G5UD2P2C34",
+    "paypal_status": "PAYOUT_SUCCESS",
+    "honesty_guarantee": "All adversarial outputs are SCRIPTED ADVERSARIAL FIXTURES; all payouts and Tesseract/LLM inferences are 100% REAL."
+  },
+  "events": [
+    {
+      "step": 1,
+      "event": "TASK_RECEIVED",
+      "timestamp": "2026-10-30T10:30:01Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription",
+      "max_budget_usd": 0.50
+    },
+    {
+      "step": 2,
+      "event": "BOTTLENECK_CHECK",
+      "timestamp": "2026-10-30T10:30:02Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "bottlenecked": true,
+      "reason": "Host 1-slot execution queue occupied by priority billing cycle proration. Offloading machine labor off-chain.",
+      "executor_status": { "busy": true, "queue_depth": 1 }
+    },
+    {
+      "step": 3,
+      "event": "JRP_EMITTED",
+      "timestamp": "2026-10-30T10:30:03Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "jrp": {
+        "jrp_id": "jrp_bounty_61d1a44fcaee",
+        "task_type": "code_bounty",
+        "task_description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
+        "max_bid_usd": 0.50,
+        "required_capabilities": ["code_generation", "python_debugging"],
+        "has_hidden_tests_leak": false,
+        "isolation_verified": true
+      }
+    },
+    {
+      "step": 4,
+      "event": "BIDS_RECEIVED",
+      "timestamp": "2026-10-30T10:30:04Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "bids": [
+        {
+          "worker_id": "rogue-worker-01",
+          "model": "scripted_adversary_fixture",
+          "bid_usd": 0.18,
+          "estimated_seconds": 0.8,
+          "reputation_score": 0.667,
+          "allocation_cap_usd": 1.00,
+          "is_adversarial_fixture": true,
+          "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
+          "composite_score": 0.8842
+        },
+        {
+          "worker_id": "code-worker-02",
+          "model": "openai/gpt-oss-20b",
+          "bid_usd": 0.22,
+          "estimated_seconds": 9.02,
+          "reputation_score": 0.385,
+          "allocation_cap_usd": 15.00,
+          "composite_score": 0.4117
+        },
+        {
+          "worker_id": "code-worker-01",
+          "model": "openai/gpt-oss-120b",
+          "bid_usd": 0.30,
+          "estimated_seconds": 4.67,
+          "reputation_score": 0.923,
+          "allocation_cap_usd": 15.00,
+          "composite_score": 0.3931
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "event": "BID_AWARDED",
+      "timestamp": "2026-10-30T10:30:05Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "winner": {
+        "worker_id": "rogue-worker-01",
+        "bid_usd": 0.18,
+        "model": "scripted_adversary_fixture",
+        "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
+      },
+      "award_reason": "Lowest price bid under market rate ($0.18 vs $0.22/$0.30)"
+    },
+    {
+      "step": 6,
+      "event": "BUDGET_RESERVED",
+      "timestamp": "2026-10-30T10:30:06Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "reservation_id": "res_e732a7a25322",
+      "worker_id": "rogue-worker-01",
+      "amount_usd": 0.18,
+      "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.18, "available_usd": 14.82, "max_usd": 15.00 }
+    },
+    {
+      "step": 7,
+      "event": "DELIVERY_RECEIVED",
+      "timestamp": "2026-10-30T10:30:08Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "rogue-worker-01",
+      "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
+      "delivery": {
+        "sha256_hash": "a4d81f14c0e66ec32b904944d154dfac3c538a7c2936a251210815147814ad59",
+        "output_preview": "def calculate_next_billing_date(start_date_str, interval_months=1): next_dt = datetime(year, month, dt.day)..."
+      }
+    },
+    {
+      "step": 8,
+      "event": "TWO_STAGE_VERIFICATION",
+      "timestamp": "2026-10-30T10:30:09Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "rogue-worker-01",
+      "integrity_stage": { "status": "PASSED", "message": "SHA-256 Digest Match" },
+      "acceptance_stage": {
+        "status": "FAILED",
+        "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month (Jan 31 + 1 month raised Feb 31 instead of Feb 28 clamping)"
+      },
+      "overall_verdict": "REJECTED"
+    },
+    {
+      "step": 9,
+      "event": "PAYMENT_BLOCKED",
+      "timestamp": "2026-10-30T10:30:10Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "rogue-worker-01",
+      "amount_paid_usd": 0.00,
+      "reservation_released": "res_e732a7a25322",
+      "reputation_update": { "prior": 0.667, "new": 0.500, "delta": -0.167, "rule": "Beta(2,1) update -> Beta(2,2)" },
+      "message": "Payment BLOCKED. Escrow released back to treasury. Rogue worker paid $0.00."
+    },
+    {
+      "step": 10,
+      "event": "TASK_REALLOCATING",
+      "timestamp": "2026-10-30T10:30:11Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "reallocated_to": "code-worker-01",
+      "model": "openai/gpt-oss-120b",
+      "bid_usd": 0.30,
+      "message": "Autonomous reallocation triggered. Awarding to winning honest worker code-worker-01."
+    },
+    {
+      "step": 11,
+      "event": "BUDGET_RESERVED",
+      "timestamp": "2026-10-30T10:30:12Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "reservation_id": "res_91d30f8cddbb",
+      "worker_id": "code-worker-01",
+      "amount_usd": 0.30,
+      "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.30, "available_usd": 14.70, "max_usd": 15.00 }
+    },
+    {
+      "step": 12,
+      "event": "DELIVERY_RECEIVED",
+      "timestamp": "2026-10-30T10:30:16Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "code-worker-01",
+      "model": "openai/gpt-oss-120b",
+      "delivery": {
+        "sha256_hash": "2fbb1871a25dbdb1789c676dcbef89d8736a43b2361df894a8274ac439266e7f",
+        "tokens_consumed": 1790,
+        "api_cost_usd": 0.00184,
+        "execution_seconds": 3.86
+      }
+    },
+    {
+      "step": 13,
+      "event": "TWO_STAGE_VERIFICATION",
+      "timestamp": "2026-10-30T10:30:17Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "code-worker-01",
+      "integrity_stage": { "status": "PASSED", "message": "SHA-256 Digest Match" },
+      "acceptance_stage": {
+        "status": "PASSED",
+        "details": [
+          "test_month_end_january_to_february : PASS",
+          "test_month_end_31_to_30            : PASS",
+          "test_leap_year_rollover            : PASS",
+          "test_invalid_interval_rejected     : PASS",
+          "test_invalid_proration_days_rejected : PASS"
+        ]
+      },
+      "overall_verdict": "VERIFIED_APPROVED"
+    },
+    {
+      "step": 14,
+      "event": "PAYOUT_SENT",
+      "timestamp": "2026-10-30T10:30:20Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "worker_id": "code-worker-01",
+      "worker_email": "sb-bef9t53614820@personal.example.com",
+      "amount_usd": 0.30,
+      "payout_batch_id": "S52G5UD2P2C34",
+      "status": "PAYOUT_SUCCESS",
+      "budget_state": { "spent_usd": 0.30, "reserved_usd": 0.00, "available_usd": 14.70, "max_usd": 15.00 },
+      "payout_card": {
+        "batch_id": "S52G5UD2P2C34",
+        "recipient": "sb-bef9t53614820@personal.example.com",
+        "amount": "$0.30 USD",
+        "status": "PAYOUT_SUCCESS",
+        "provider": "PayPal Payouts API v1"
+      }
+    },
+    {
+      "step": 15,
+      "event": "LEDGER_COMMITTED",
+      "timestamp": "2026-10-30T10:30:21Z",
+      "cycle_id": "bounty_61d1a44fcaee",
+      "entry_index": 7,
+      "prev_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "chain_hash": "a24fa68b94fef405da010bb1e39a3449339e083c21cb0a8df419a4ad41975b9f",
+      "audit_status": "CRYPTOGRAPHICALLY_VERIFIED"
+    }
+  ]
+}

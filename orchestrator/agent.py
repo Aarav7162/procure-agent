@@ -126,7 +126,14 @@ async def submit_task(req: TaskRequest):
 @app.get("/budget")
 async def get_budget():
     if _budget_manager is None:
-        return {"error": "No active cycle"}
+        return {
+            "cycle_id": "idle",
+            "spent_usd": 0.0,
+            "reserved_usd": 0.0,
+            "available_usd": 15.0,
+            "max_usd": 15.0,
+            "pct_used": 0.0,
+        }
     return _budget_manager.summary()
 
 
@@ -139,6 +146,22 @@ async def get_ledger():
 async def verify_ledger():
     valid, desc, details = verify_ledger_chain()
     return {"is_valid": valid, "description": desc, "details": details}
+
+
+@app.get("/reputation")
+async def get_reputations():
+    from orchestrator.reputation import get_worker_reputation
+    workers = ["code-worker-01", "code-worker-02", "ocr-worker-01", "ocr-worker-02", "llm-worker-01", "rogue-worker-01"]
+    return [get_worker_reputation(w) for w in workers]
+
+
+@app.get("/recorded_run")
+async def get_recorded_run():
+    run_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo", "recorded_runs", "recorded_bounty_run.json"))
+    if os.path.exists(run_file):
+        with open(run_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"error": "Recorded run not found"}
 
 
 @app.get("/health")

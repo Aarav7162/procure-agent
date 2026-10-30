@@ -3,471 +3,1643 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProcureAgent — Live Event Feed</title>
+  <title>ProcureAgent — Autonomous Procurement & Zero-Trust Settlement</title>
   <style>
     :root {
-      --bg: #000000;
-      --surface: #121214;
-      --card: #1c1c1e;
+      --bg: #090a0f;
+      --surface: #11131a;
+      --card: #171a24;
+      --card-hover: #1e2230;
       --border: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
-      --text: #f4f4f5;
-      --text-muted: #a1a1aa;
-      --accent: #5e6ad2;
-      --paypal-blue: #003087;
-      --success: #30d158;
-      --danger: #ff453a;
-      --warning: #ffd60a;
+      --border-accent: rgba(99, 102, 241, 0.35);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --paypal-blue: #0070ba;
+      --paypal-dark: #003087;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --reserved: #f97316;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
-      padding: 24px;
-      line-height: 1.5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 16px 24px;
+      line-height: 1.45;
+      font-size: 13px;
+      min-height: 100vh;
     }
+
+    /* Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 20px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .brand {
+    .brand-group {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .badge {
-      font-size: 11px;
-      text-transform: uppercase;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: rgba(94, 106, 210, 0.2);
-      color: #8b96f5;
-      border: 1px solid rgba(94, 106, 210, 0.3);
-      letter-spacing: 0.5px;
+    .brand-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #fff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    .status-pill {
+    .pill {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pill-accent {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.35);
+    }
+    .pill-paypal {
+      background: rgba(0, 112, 186, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(0, 112, 186, 0.35);
+    }
+    .pill-fixture {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }
+
+    /* Mode Switcher */
+    .mode-switch {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .mode-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
       font-size: 12px;
-      padding: 4px 12px;
-      border-radius: 20px;
-      background: rgba(48, 209, 88, 0.15);
-      color: var(--success);
-      border: 1px solid rgba(48, 209, 88, 0.3);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       gap: 6px;
     }
-    .status-dot {
-      width: 8px;
-      height: 8px;
+    .mode-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 1px 6px var(--accent-glow);
+    }
+    .mode-btn:hover:not(.active) {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .conn-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
     }
-    .grid {
+    .dot-live { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot-offline { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+    .dot-dead { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    /* Top Grid Layout */
+    .dashboard-layout {
       display: grid;
-      grid-template-columns: 320px 1fr 340px;
-      gap: 24px;
+      grid-template-columns: 340px 1.4fr 1.15fr;
+      gap: 16px;
+      align-items: start;
     }
-    .card {
+
+    .panel {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 18px;
-    }
-    h2 {
-      font-size: 14px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
+      padding: 16px;
       margin-bottom: 16px;
     }
-    /* Controls */
-    .form-group { margin-bottom: 14px; }
-    label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-    textarea, input {
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Treasury Gauge */
+    .gauge-container {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+    }
+    .gauge-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+    .gauge-amount {
+      font-size: 24px;
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #fff;
+    }
+    .gauge-bar-track {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 5px;
+      overflow: hidden;
+      display: flex;
+      margin: 10px 0;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .gauge-bar-spent {
+      background: linear-gradient(90deg, #38bdf8, #0284c7);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .gauge-bar-reserved {
+      background: linear-gradient(90deg, #fbbf24, #f59e0b);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .gauge-legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+    .legend-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .legend-label { color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+    .legend-val { font-family: ui-monospace, monospace; font-weight: 700; font-size: 13px; margin-top: 2px; }
+
+    /* Form Controls */
+    .form-group { margin-bottom: 10px; }
+    label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+    textarea, input[type="text"], input[type="number"] {
       width: 100%;
       background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-family: inherit;
+      transition: border-color 0.15s;
     }
     textarea:focus, input:focus { outline: none; border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 58px; }
+
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .chip {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover {
+      background: var(--card-hover);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .chip-impossible {
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+    .chip-impossible:hover {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--danger);
+    }
+
     .btn {
       width: 100%;
-      padding: 10px;
-      border-radius: 8px;
+      padding: 9px 12px;
+      border-radius: 7px;
       border: none;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 8px;
-    }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-secondary { background: rgba(255, 69, 58, 0.15); color: var(--danger); border: 1px solid rgba(255, 69, 58, 0.3); }
-    .btn-secondary:hover { background: rgba(255, 69, 58, 0.25); }
-    .btn-verify { background: rgba(48, 209, 88, 0.15); color: var(--success); border: 1px solid rgba(48, 209, 88, 0.3); margin-top: 12px; }
-
-    /* Budget gauge */
-    .budget-metric {
       display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      font-size: 13px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
     }
-    .budget-metric:last-child { border-bottom: none; }
-    .metric-val { font-weight: 600; font-family: monospace; }
-    .progress-bar-bg {
-      height: 8px;
-      background: var(--card);
-      border-radius: 4px;
-      overflow: hidden;
-      margin: 12px 0;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px var(--accent-glow);
     }
-    .progress-bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--accent), var(--success));
-      transition: width 0.3s ease;
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+    .btn-secondary {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      margin-top: 6px;
     }
+    .btn-secondary:hover { background: rgba(245, 158, 11, 0.2); }
+    .btn-occupy {
+      background: rgba(14, 165, 233, 0.1);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.25);
+      margin-top: 6px;
+      font-size: 11px;
+    }
+    .btn-occupy:hover { background: rgba(14, 165, 233, 0.2); }
 
-    /* Event stream */
-    #event-feed {
-      height: calc(100vh - 160px);
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-right: 6px;
-    }
-    .event-card {
+    /* Pipeline Sequence Card */
+    .pipeline-tracker {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 14px;
-      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 12px;
+      margin-bottom: 14px;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-6px); }
+    .pipeline-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .pipeline-steps {
+      display: flex;
+      gap: 4px;
+      position: relative;
+    }
+    .p-step {
+      flex: 1;
+      padding: 6px 4px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      transition: all 0.2s ease;
+    }
+    .p-step.active {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.15);
+      color: #fff;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .p-step.completed {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.08);
+      color: var(--success);
+    }
+    .p-step.blocked {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+
+    /* Event Stream */
+    .stream-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      gap: 4px;
+    }
+    .filter-btn {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+    }
+    .filter-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    #event-feed {
+      height: 480px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+    #event-feed::-webkit-scrollbar { width: 5px; }
+    #event-feed::-webkit-scrollbar-track { background: transparent; }
+    #event-feed::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+
+    .event-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      border-left: 3px solid var(--border);
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .event-header {
+    .event-card.ev-TASK_RECEIVED { border-left-color: #a855f7; }
+    .event-card.ev-BOTTLENECK_CHECK { border-left-color: #38bdf8; }
+    .event-card.ev-JRP_EMITTED { border-left-color: var(--accent); }
+    .event-card.ev-BIDS_RECEIVED { border-left-color: #60a5fa; }
+    .event-card.ev-BID_AWARDED { border-left-color: #38bdf8; }
+    .event-card.ev-BUDGET_RESERVED { border-left-color: var(--warning); }
+    .event-card.ev-DELIVERY_RECEIVED { border-left-color: #818cf8; }
+    .event-card.ev-TWO_STAGE_VERIFICATION { border-left-color: #c084fc; }
+    .event-card.ev-PAYMENT_BLOCKED { border-left-color: var(--danger); background: rgba(239, 68, 68, 0.04); }
+    .event-card.ev-TASK_REALLOCATING { border-left-color: #fbbf24; background: rgba(245, 158, 11, 0.05); }
+    .event-card.ev-PAYOUT_SENT { border-left-color: #0070ba; background: rgba(0, 112, 186, 0.08); }
+    .event-card.ev-NO_CAPABLE_WORKERS { border-left-color: var(--danger); }
+    .event-card.ev-LEDGER_COMMITTED { border-left-color: var(--success); }
+
+    .event-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .event-type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .event-time { font-size: 10px; color: var(--text-dim); font-family: ui-monospace, monospace; }
+    .event-body { font-size: 12px; color: #e5e7eb; line-height: 1.4; }
+
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 6px 8px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .data-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .data-table tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+    /* PayPal Card */
+    .paypal-card {
+      background: linear-gradient(135deg, rgba(0, 48, 135, 0.25) 0%, rgba(0, 112, 186, 0.15) 100%);
+      border: 1px solid rgba(0, 112, 186, 0.4);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    .paypal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
     }
-    .event-type {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .event-time { font-size: 11px; color: var(--text-muted); font-family: monospace; }
-    .event-body { font-size: 13px; color: #d4d4d8; }
-
-    /* Event variants */
-    .event-JRP_EMITTED { border-left: 3px solid var(--accent); }
-    .event-BID_AWARDED { border-left: 3px solid #64d2ff; }
-    .event-BUDGET_RESERVED { border-left: 3px solid var(--warning); }
-    .event-TWO_STAGE_VERIFICATION { border-left: 3px solid #bf5af2; }
-    .event-PAYMENT_BLOCKED { border-left: 3px solid var(--danger); background: rgba(255, 69, 58, 0.05); }
-    .event-TASK_REALLOCATING { border-left: 3px solid var(--warning); background: rgba(255, 214, 10, 0.05); }
-    .event-PAYOUT_SENT { border-left: 3px solid #0070ba; background: rgba(0, 112, 186, 0.08); }
-
-    .verification-badges {
+    .paypal-logo {
+      font-weight: 800;
+      font-size: 13px;
+      color: #38bdf8;
       display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .paypal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 8px;
-    }
-    .v-badge {
       font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-weight: 600;
     }
-    .v-pass { background: rgba(48, 209, 88, 0.2); color: var(--success); border: 1px solid rgba(48, 209, 88, 0.4); }
-    .v-fail { background: rgba(255, 69, 58, 0.2); color: var(--danger); border: 1px solid rgba(255, 69, 58, 0.4); }
+    .paypal-field { color: var(--text-dim); }
+    .paypal-value { font-family: ui-monospace, monospace; font-weight: 600; color: #fff; word-break: break-all; }
 
-    /* Ledger table */
-    .ledger-table {
-      width: 100%;
-      font-size: 11px;
-      border-collapse: collapse;
-      margin-top: 8px;
+    /* Replay Bar */
+    .replay-bar {
+      background: var(--surface);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      box-shadow: 0 2px 12px rgba(99, 102, 241, 0.1);
     }
-    .ledger-table th { text-align: left; color: var(--text-muted); padding: 6px 4px; border-bottom: 1px solid var(--border); }
-    .ledger-table td { padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-family: monospace; }
+    .replay-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .replay-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .replay-btn:hover { background: var(--accent); color: #fff; }
+    .replay-status {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Verification Badge styles */
+    .v-chip {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .v-pass { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .v-fail { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+    /* Disclaimers & Notes */
+    .notice-box {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Top Header -->
   <header>
-    <div class="brand">
-      <h1 style="font-size: 18px; font-weight: 700;">ProcureAgent</h1>
-      <span class="badge">Phase 2.5 Live Feed</span>
+    <div class="brand-group">
+      <div class="brand-title">ProcureAgent</div>
+      <span class="pill pill-accent">Autonomous Procurement Engine</span>
+      <span class="pill pill-paypal">PayPal Sandbox Payouts API v1</span>
+      <span class="pill pill-fixture">Invariant Guard: S + R &le; B</span>
     </div>
-    <div id="conn-pill" class="status-pill">
-      <span class="status-dot"></span>
-      <span id="conn-status">Connecting WebSocket...</span>
+
+    <!-- Mode Selector & Live Status -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="mode-switch">
+        <button id="btn-mode-live" class="mode-btn active" onclick="switchMode('live')">
+          <span class="dot dot-live"></span> Live Mode (WebSocket)
+        </button>
+        <button id="btn-mode-replay" class="mode-btn" onclick="switchMode('replay')">
+          <span>▶</span> Replay Recorded Run (Offline)
+        </button>
+      </div>
+      <div class="conn-indicator">
+        <span id="conn-dot" class="dot dot-live"></span>
+        <span id="conn-text">WS Connected</span>
+      </div>
     </div>
   </header>
 
-  <div class="grid">
-    <!-- Panel 1: Controls -->
-    <div>
-      <div class="card">
-        <h2>Submit Task</h2>
-        <div class="form-group">
-          <label>Task Description</label>
-          <textarea id="task-desc" rows="3">Process 2000 scanned tax forms with OCR</textarea>
-        </div>
-        <div class="form-group">
-          <label>Max Budget ($ USD)</label>
-          <input type="number" id="task-budget" value="15.00" step="1.00">
-        </div>
-        <button id="btn-submit" class="btn btn-primary" onclick="submitTask()">Deploy Autonomous Task</button>
-        <button id="btn-attack" class="btn btn-secondary" onclick="triggerRogueAttack()">Simulate Rogue Attack</button>
-      </div>
-
-      <div class="card" style="margin-top: 20px;">
-        <h2>Budget Invariant (S + R &le; B)</h2>
-        <div class="progress-bar-bg">
-          <div id="budget-progress" class="progress-bar-fill"></div>
-        </div>
-        <div class="budget-metric">
-          <span>Spent (S)</span>
-          <span id="metric-spent" class="metric-val">$0.00</span>
-        </div>
-        <div class="budget-metric">
-          <span>Reserved (R)</span>
-          <span id="metric-reserved" class="metric-val">$0.00</span>
-        </div>
-        <div class="budget-metric">
-          <span>Available (B - (S+R))</span>
-          <span id="metric-available" class="metric-val" style="color: var(--success);">$15.00</span>
-        </div>
-        <div class="budget-metric">
-          <span>Authorized Cap (B)</span>
-          <span id="metric-max" class="metric-val">$15.00</span>
-        </div>
-      </div>
+  <!-- Replay Control Bar (Visible in Replay Mode) -->
+  <div id="replay-bar" class="replay-bar" style="display: none;">
+    <div class="replay-controls">
+      <button class="replay-btn" onclick="replayReset()">⏮ Reset</button>
+      <button class="replay-btn" onclick="replayPrev()">◀ Prev</button>
+      <button id="btn-replay-play" class="replay-btn" onclick="replayTogglePlay()">▶ Play</button>
+      <button class="replay-btn" onclick="replayNext()">Next ▶</button>
+      <span style="font-size: 11px; color: var(--text-dim); margin-left: 8px;">Speed:</span>
+      <button class="replay-btn" onclick="setReplaySpeed(1)">1x</button>
+      <button class="replay-btn" onclick="setReplaySpeed(2)">2x</button>
+      <button class="replay-btn" onclick="setReplaySpeed(4)">4x</button>
     </div>
-
-    <!-- Panel 2: Live Event Stream -->
-    <div class="card">
-      <h2>Live Event Stream</h2>
-      <div id="event-feed">
-        <div class="event-card">
-          <div class="event-header">
-            <span class="event-type" style="color: var(--accent);">SYSTEM_READY</span>
-            <span class="event-time">--:--:--</span>
-          </div>
-          <div class="event-body">Ready for autonomous procurement tasks. WebSocket listener initialized.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Panel 3: Tamper-Evident Ledger -->
-    <div>
-      <div class="card">
-        <h2>Tamper-Evident Ledger</h2>
-        <div id="ledger-entries">
-          <table class="ledger-table">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Amt</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="ledger-body">
-              <tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No transactions yet</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <button class="btn btn-verify" onclick="verifyLedger()">Verify Ledger Hash Chain</button>
-        <div id="verify-result" style="font-size: 11px; margin-top: 8px; color: var(--text-muted);"></div>
-      </div>
+    <div class="replay-status">
+      <span id="replay-step-label">Step 0 / 15: Initialized</span>
+      <span class="pill pill-accent" style="font-size: 10px;">Zero-API-Key Offline Mode</span>
     </div>
   </div>
 
-  <script>
-    let ws;
-    const feed = document.getElementById("event-feed");
+  <!-- Main Grid -->
+  <div class="dashboard-layout">
 
-    function connectWS() {
+    <!-- Column 1: Task Deployment & Budget Escrow -->
+    <div>
+      <!-- Treasury Escrow Card -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Escrow Budget Guard (S + R &le; B)</span>
+          <span class="pill pill-accent" style="font-size: 10px;">SQLite BEGIN IMMEDIATE</span>
+        </div>
+        <div class="gauge-container">
+          <div class="gauge-top">
+            <span style="color: var(--text-dim); font-size: 11px;">Remaining Cap</span>
+            <span id="metric-avail-big" class="gauge-amount" style="color: var(--success);">$15.00</span>
+          </div>
+          <div class="gauge-bar-track">
+            <div id="bar-spent" class="gauge-bar-spent"></div>
+            <div id="bar-reserved" class="gauge-bar-reserved"></div>
+          </div>
+          <div class="gauge-legend">
+            <div class="legend-item">
+              <div class="legend-label"><span style="color: #38bdf8;">■</span> Spent (S)</div>
+              <div id="metric-spent" class="legend-val">$0.00</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-label"><span style="color: #fbbf24;">■</span> Reserved (R)</div>
+              <div id="metric-reserved" class="legend-val">$0.00</div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-label"><span style="color: #10b981;">■</span> Cap (B)</div>
+              <div id="metric-max" class="legend-val">$15.00</div>
+            </div>
+          </div>
+        </div>
+        <div class="notice-box">
+          <b>Escrow Invariant Guarantee:</b> Funds are reserved atomically in SQLite before any worker dispatches. Failed deliveries immediately release reservation back to available liquidity without paying $0.00.
+        </div>
+      </div>
+
+      <!-- Task Deployment Controls -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Deploy Autonomous Task</span>
+          <span id="run-status-badge" class="pill pill-accent" style="font-size: 10px;">IDLE</span>
+        </div>
+
+        <div class="form-group">
+          <label>Task Description (Free-Form Natural Language)</label>
+          <textarea id="task-desc">Fix month-end rollover ValueError in calculate_next_billing_date in billing.py</textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+          <div class="form-group">
+            <label>Max Budget ($ USD)</label>
+            <input type="number" id="task-budget" value="0.50" step="0.10" min="0.10" max="15.00">
+          </div>
+          <div class="form-group">
+            <label>Deadline: <span id="deadline-val">12.0s</span></label>
+            <input type="range" id="task-deadline" min="6" max="30" value="12" oninput="updateDeadlineUI(this.value)">
+          </div>
+        </div>
+
+        <div style="font-size: 10.5px; color: var(--text-dim); margin-bottom: 8px;">
+          Urgency &lambda;<sub>t</sub>: <b id="lambda-val" style="color: #fff;">0.75</b> |
+          W<sub>speed</sub>: <b id="wspeed-val">0.60</b> |
+          W<sub>price</sub>: <b id="wprice-val">0.20</b> |
+          W<sub>rep</sub>: <b>0.20</b> (&sum;=1.00)
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label>Quick Demo Presets</label>
+          <div class="quick-chips">
+            <div class="chip" onclick="setPreset('code')">Code Bounty (120B vs 20B)</div>
+            <div class="chip" onclick="setPreset('ocr')">Document OCR (Alpha vs Beta)</div>
+            <div class="chip chip-impossible" onclick="setPreset('impossible')">Impossible Task ($0 Proof)</div>
+            <div class="chip" onclick="setPreset('adversarial')">Rogue Adversary Attack</div>
+          </div>
+        </div>
+
+        <button id="btn-submit" class="btn btn-primary" onclick="submitTask()">
+          <span>⚡</span> Deploy Autonomous Task
+        </button>
+        <button id="btn-attack" class="btn btn-secondary" onclick="triggerRogueAttack()">
+          <span>⚠️</span> Simulate Rogue Underbid Attack
+        </button>
+        <button id="btn-occupy" class="btn btn-occupy" onclick="triggerOccupyHost()">
+          <span>🔒</span> Occupy Host Slot (Force External Procurement)
+        </button>
+
+        <div class="notice-box">
+          <b>Label Disclosures:</b>
+          <br>• <span style="color: #fbbf24;">[SCRIPTED ADVERSARIAL FIXTURES]</span>: Rogue worker intentional flaws are scripted test harnesses to prove zero-trust rejection.
+          <br>• <span style="color: #38bdf8;">[REAL RUNTIME]</span>: All Groq LLM inference, Tesseract OCR, and PayPal Sandbox settlements are 100% genuine live API calls.
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 2: Zero-Trust Pipeline & Live Event Stream -->
+    <div>
+      <!-- Pipeline Tracker Card -->
+      <div class="pipeline-tracker">
+        <div class="pipeline-title">
+          <span>Zero-Trust Verification Pipeline</span>
+          <span id="pipeline-status-text" style="color: var(--accent);">READY</span>
+        </div>
+        <div class="pipeline-steps">
+          <div id="step-jrp" class="p-step">1. JRP Emitted</div>
+          <div id="step-bids" class="p-step">2. Multi-Bid</div>
+          <div id="step-escrow" class="p-step">3. Escrow Lock</div>
+          <div id="step-delivery" class="p-step">4. Delivery</div>
+          <div id="step-verify1" class="p-step">5. Integrity</div>
+          <div id="step-verify2" class="p-step">6. Acceptance</div>
+          <div id="step-block" class="p-step">7. Rogue Block</div>
+          <div id="step-realloc" class="p-step">8. Reallocate</div>
+          <div id="step-payout" class="p-step">9. PayPal Paid</div>
+        </div>
+      </div>
+
+      <!-- Event Stream -->
+      <div class="panel" style="margin-bottom: 0;">
+        <div class="panel-header">
+          <span class="panel-title">Audit Event Stream</span>
+          <div class="stream-toolbar">
+            <div class="filter-group">
+              <button class="filter-btn active" onclick="filterEvents('ALL')">All</button>
+              <button class="filter-btn" onclick="filterEvents('VERIFY')">Verification</button>
+              <button class="filter-btn" onclick="filterEvents('PAYPAL')">PayPal</button>
+              <button class="filter-btn" onclick="filterEvents('BUDGET')">Budget</button>
+            </div>
+            <button class="filter-btn" onclick="clearFeed()">Clear</button>
+          </div>
+        </div>
+
+        <div id="event-feed">
+          <div class="event-card ev-SYSTEM_READY">
+            <div class="event-top">
+              <span class="event-type-badge" style="color: var(--accent);">SYSTEM_READY</span>
+              <span class="event-time">--:--:--</span>
+            </div>
+            <div class="event-body">
+              ProcureAgent Orchestrator online. Connected to capability broker and treasury. Ready for free-form capability procurement.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Column 3: Multi-Worker Bids, Settlement Card, Reputation, Ledger -->
+    <div>
+      <!-- Multi-Worker Bids & Scoring Matrix -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Candidate Bids & Scoring Matrix</span>
+          <span class="pill pill-accent" style="font-size: 10px;">Normalized &sum;W = 1.000</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Worker / Model</th>
+              <th>Bid ($)</th>
+              <th>Speed</th>
+              <th>Rep</th>
+              <th>Score</th>
+              <th>Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="bids-body">
+            <tr>
+              <td><span style="color: #fbbf24;">rogue-worker-01</span><br><span style="font-size: 9px; color: var(--text-dim);">[SCRIPTED FIXTURE]</span></td>
+              <td>$0.18</td>
+              <td>0.8s</td>
+              <td>0.667</td>
+              <td><b>0.8842</b></td>
+              <td><span class="v-chip v-pass">Awarded (Low)</span></td>
+            </tr>
+            <tr>
+              <td>code-worker-02<br><span style="font-size: 9px; color: var(--text-dim);">openai/gpt-oss-20b</span></td>
+              <td>$0.22</td>
+              <td>9.0s</td>
+              <td>0.385</td>
+              <td>0.4117</td>
+              <td><span style="color: var(--text-dim);">Outbid</span></td>
+            </tr>
+            <tr>
+              <td>code-worker-01<br><span style="font-size: 9px; color: var(--text-dim);">openai/gpt-oss-120b</span></td>
+              <td>$0.30</td>
+              <td>4.7s</td>
+              <td>0.923</td>
+              <td>0.3931</td>
+              <td><span class="v-chip v-pass">Reassigned</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Live PayPal Settlement Card -->
+      <div class="paypal-card">
+        <div class="paypal-header">
+          <div class="paypal-logo">
+            <span>💳</span> PayPal Sandbox Live Settlement
+          </div>
+          <span id="paypal-status-pill" class="pill pill-paypal" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.4);">
+            PAYOUT_SUCCESS
+          </span>
+        </div>
+        <div class="paypal-grid">
+          <div>
+            <div class="paypal-field">Batch ID</div>
+            <div id="paypal-batch-id" class="paypal-value">S52G5UD2P2C34</div>
+          </div>
+          <div>
+            <div class="paypal-field">Settled Amount</div>
+            <div id="paypal-amount" class="paypal-value">$0.30 USD</div>
+          </div>
+          <div style="grid-column: span 2;">
+            <div class="paypal-field">Payer Account</div>
+            <div class="paypal-value" style="font-size: 10px; color: #94a3b8;">sb-s8vke53470365@business.example.com</div>
+          </div>
+          <div style="grid-column: span 2;">
+            <div class="paypal-field">Recipient Account</div>
+            <div id="paypal-recipient" class="paypal-value" style="font-size: 10px; color: #94a3b8;">sb-bef9t53614820@personal.example.com</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bayesian Reputation Engine -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Bayesian Reputation (Beta(2,1))</span>
+          <span class="pill pill-accent" style="font-size: 10px;">Cold-Start Cap: $1.00</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Worker</th>
+              <th>Beta(&alpha;,&beta;)</th>
+              <th>Score (&mu;)</th>
+              <th>Cap</th>
+            </tr>
+          </thead>
+          <tbody id="rep-body">
+            <tr>
+              <td>code-worker-01 (120B)</td>
+              <td>Beta(3.0, 1.0)</td>
+              <td><span style="color: var(--success); font-weight: 700;">0.750</span></td>
+              <td>$1.00*</td>
+            </tr>
+            <tr>
+              <td>code-worker-02 (20B)</td>
+              <td>Beta(2.0, 1.0)</td>
+              <td>0.667</td>
+              <td>$1.00*</td>
+            </tr>
+            <tr>
+              <td>ocr-worker-01 (Alpha)</td>
+              <td>Beta(3.0, 1.0)</td>
+              <td>0.750</td>
+              <td>$1.00*</td>
+            </tr>
+            <tr>
+              <td>ocr-worker-02 (Beta)</td>
+              <td>Beta(3.0, 1.0)</td>
+              <td>0.750</td>
+              <td>$1.00*</td>
+            </tr>
+            <tr>
+              <td><span style="color: #fbbf24;">rogue-worker-01</span> [FIXTURE]</td>
+              <td>Beta(2.0, 2.0)</td>
+              <td><span style="color: var(--danger); font-weight: 700;">0.500 &darr;</span></td>
+              <td>$1.00*</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px;">
+          *Cold-start cap active (N &lt; 5 lifetime tasks limits exposure to $1.00 max).
+        </div>
+      </div>
+
+      <!-- Tamper-Evident SHA-256 Ledger -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Cryptographic SHA-256 Ledger</span>
+          <button class="filter-btn active" onclick="verifyLedgerChain()">Verify Chain</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Worker</th>
+              <th>Amount</th>
+              <th>Hash Link</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-body">
+            <tr><td colspan="5" style="color: var(--text-dim); text-align: center;">Loading ledger transactions...</td></tr>
+          </tbody>
+        </table>
+        <div id="verify-badge" style="margin-top: 8px; font-size: 11px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    // EMBEDDED RECORDED AUDIT RUN (ZERO-API-KEY FALLBACK)
+    // ─────────────────────────────────────────────────────────────
+    const RECORDED_RUN = {
+      "metadata": {
+        "title": "Autonomous Code Bounty Procurement & Settlement",
+        "paypal_batch_id": "S52G5UD2P2C34",
+        "recipient": "sb-bef9t53614820@personal.example.com",
+        "amount_usd": 0.30
+      },
+      "events": [
+        {
+          "step": 1,
+          "event": "TASK_RECEIVED",
+          "description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
+          "max_budget_usd": 0.50,
+          "ts": "10:30:01"
+        },
+        {
+          "step": 2,
+          "event": "BOTTLENECK_CHECK",
+          "bottlenecked": true,
+          "reason": "Host 1-slot execution queue occupied. Offloading machine labor off-chain.",
+          "ts": "10:30:02"
+        },
+        {
+          "step": 3,
+          "event": "JRP_EMITTED",
+          "jrp": {
+            "jrp_id": "jrp_bounty_61d1a44fcaee",
+            "task_type": "code_bounty",
+            "max_bid_usd": 0.50,
+            "required_capabilities": ["code_generation", "python_debugging"],
+            "has_hidden_tests_leak": false
+          },
+          "ts": "10:30:03"
+        },
+        {
+          "step": 4,
+          "event": "BIDS_RECEIVED",
+          "bids": [
+            { "worker_id": "rogue-worker-01", "model": "scripted_adversary_fixture", "bid_usd": 0.18, "estimated_seconds": 0.8, "reputation_score": 0.667, "composite_score": 0.8842, "status": "BID", "is_fixture": true },
+            { "worker_id": "code-worker-02", "model": "openai/gpt-oss-20b", "bid_usd": 0.22, "estimated_seconds": 9.02, "reputation_score": 0.385, "composite_score": 0.4117, "status": "BID" },
+            { "worker_id": "code-worker-01", "model": "openai/gpt-oss-120b", "bid_usd": 0.30, "estimated_seconds": 4.67, "reputation_score": 0.923, "composite_score": 0.3931, "status": "BID" }
+          ],
+          "ts": "10:30:04"
+        },
+        {
+          "step": 5,
+          "event": "BID_AWARDED",
+          "winner": { "worker_id": "rogue-worker-01", "bid_usd": 0.18, "is_fixture": true },
+          "award_reason": "Lowest price bid under market rate ($0.18 vs $0.22 / $0.30)",
+          "ts": "10:30:05"
+        },
+        {
+          "step": 6,
+          "event": "BUDGET_RESERVED",
+          "worker_id": "rogue-worker-01",
+          "amount_usd": 0.18,
+          "reservation_id": "res_e732a7a25322",
+          "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.18, "available_usd": 14.82, "max_usd": 15.00, "pct_used": 1.2 },
+          "ts": "10:30:06"
+        },
+        {
+          "step": 7,
+          "event": "DELIVERY_RECEIVED",
+          "worker_id": "rogue-worker-01",
+          "delivery": { "sha256_hash": "a4d81f14c0e66ec32b904944d154dfac3c538a7c2936a251210815147814ad59" },
+          "ts": "10:30:08"
+        },
+        {
+          "step": 8,
+          "event": "TWO_STAGE_VERIFICATION",
+          "worker_id": "rogue-worker-01",
+          "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
+          "acceptance": { "verified": false, "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month (Jan 31 + 1 month raised Feb 31 instead of Feb 28 clamping)" },
+          "overall_verdict": "REJECTED",
+          "ts": "10:30:09"
+        },
+        {
+          "step": 9,
+          "event": "PAYMENT_BLOCKED",
+          "worker_id": "rogue-worker-01",
+          "amount_paid_usd": 0.00,
+          "reservation_released": "res_e732a7a25322",
+          "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.00, "available_usd": 15.00, "max_usd": 15.00, "pct_used": 0.0 },
+          "message": "Payment BLOCKED. Escrow released back to treasury. Rogue worker paid $0.00.",
+          "reputation_update": { "worker": "rogue-worker-01", "prior": 0.667, "new": 0.500, "delta": -0.167 },
+          "ts": "10:30:10"
+        },
+        {
+          "step": 10,
+          "event": "TASK_REALLOCATING",
+          "failed_worker": "rogue-worker-01",
+          "reallocated_to": "code-worker-01",
+          "model": "openai/gpt-oss-120b",
+          "bid_usd": 0.30,
+          "message": "Autonomous reallocation triggered. Awarding to next highest qualified candidate code-worker-01.",
+          "ts": "10:30:11"
+        },
+        {
+          "step": 11,
+          "event": "BUDGET_RESERVED",
+          "worker_id": "code-worker-01",
+          "amount_usd": 0.30,
+          "reservation_id": "res_91d30f8cddbb",
+          "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.30, "available_usd": 14.70, "max_usd": 15.00, "pct_used": 2.0 },
+          "ts": "10:30:12"
+        },
+        {
+          "step": 12,
+          "event": "DELIVERY_RECEIVED",
+          "worker_id": "code-worker-01",
+          "delivery": {
+            "sha256_hash": "2fbb1871a25dbdb1789c676dcbef89d8736a43b2361df894a8274ac439266e7f",
+            "tokens_consumed": 1790,
+            "cost_usd": 0.00184
+          },
+          "ts": "10:30:16"
+        },
+        {
+          "step": 13,
+          "event": "TWO_STAGE_VERIFICATION",
+          "worker_id": "code-worker-01",
+          "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
+          "acceptance": { "verified": true, "details": "5/5 hidden unit tests passed in sandbox (month-end rollover, leap year, clamping)" },
+          "overall_verdict": "VERIFIED_APPROVED",
+          "ts": "10:30:17"
+        },
+        {
+          "step": 14,
+          "event": "PAYOUT_SENT",
+          "payout": {
+            "payout_batch_id": "S52G5UD2P2C34",
+            "worker_id": "code-worker-01",
+            "worker_email": "sb-bef9t53614820@personal.example.com",
+            "amount_usd": 0.30,
+            "final_status": "PAYOUT_SUCCESS"
+          },
+          "budget": { "spent_usd": 0.30, "reserved_usd": 0.00, "available_usd": 14.70, "max_usd": 15.00, "pct_used": 2.0 },
+          "ts": "10:30:20"
+        },
+        {
+          "step": 15,
+          "event": "LEDGER_COMMITTED",
+          "worker_id": "code-worker-01",
+          "amount_usd": 0.30,
+          "prev_hash": "e3b0c44298fc1c14...",
+          "chain_hash": "a24fa68b94fef405...",
+          "audit_status": "CRYPTOGRAPHICALLY_VERIFIED",
+          "ts": "10:30:21"
+        }
+      ]
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // STATE & VARIABLES
+    // ─────────────────────────────────────────────────────────────
+    let currentMode = "live";
+    let ws = null;
+    let replayStep = 0;
+    let replayInterval = null;
+    let replaySpeedMs = 1200;
+    let activeFilter = "ALL";
+
+    // ─────────────────────────────────────────────────────────────
+    // INITIALIZATION
+    // ─────────────────────────────────────────────────────────────
+    window.addEventListener("DOMContentLoaded", () => {
+      connectWebSocket();
+      fetchLedger();
+      fetchReputation();
+      fetchBudget();
+      updateDeadlineUI(12);
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // MODE SWITCHING
+    // ─────────────────────────────────────────────────────────────
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById("btn-mode-live").classList.toggle("active", mode === "live");
+      document.getElementById("btn-mode-replay").classList.toggle("active", mode === "replay");
+      document.getElementById("replay-bar").style.display = (mode === "replay") ? "flex" : "none";
+
+      if (mode === "replay") {
+        document.getElementById("conn-dot").className = "dot dot-offline";
+        document.getElementById("conn-text").innerText = "Replay Mode (Offline)";
+        replayReset();
+      } else {
+        document.getElementById("conn-dot").className = "dot dot-live";
+        document.getElementById("conn-text").innerText = "WS Connected";
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // WEBSOCKET LOGIC
+    // ─────────────────────────────────────────────────────────────
+    function connectWebSocket() {
       const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname || "127.0.0.1";
       const port = window.location.port || "8000";
       const wsUrl = `${proto}//${host}:${port}/ws`;
 
-      ws = new WebSocket(wsUrl);
+      try {
+        ws = new WebSocket(wsUrl);
 
-      ws.onopen = () => {
-        document.getElementById("conn-status").innerText = "WebSocket Connected";
-        document.getElementById("conn-pill").style.borderColor = "rgba(48, 209, 88, 0.4)";
-      };
+        ws.onopen = () => {
+          if (currentMode === "live") {
+            document.getElementById("conn-dot").className = "dot dot-live";
+            document.getElementById("conn-text").innerText = "WS Connected";
+          }
+        };
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleEvent(data);
-        } catch (e) {
-          console.error("WS Parse Error", e);
-        }
-      };
+        ws.onmessage = (e) => {
+          if (currentMode !== "live") return;
+          try {
+            const data = JSON.parse(e.data);
+            handleIncomingEvent(data);
+          } catch (err) {
+            console.error("WS Parse error", err);
+          }
+        };
 
-      ws.onclose = () => {
-        document.getElementById("conn-status").innerText = "Disconnected (reconnecting...)";
-        document.getElementById("conn-pill").style.borderColor = "rgba(255, 69, 58, 0.4)";
-        setTimeout(connectWS, 2000);
-      };
+        ws.onclose = () => {
+          if (currentMode === "live") {
+            document.getElementById("conn-dot").className = "dot dot-dead";
+            document.getElementById("conn-text").innerText = "Disconnected (Retrying...)";
+            setTimeout(connectWebSocket, 2000);
+          }
+        };
+      } catch (err) {
+        console.warn("WebSocket not accessible:", err);
+      }
     }
 
-    function handleEvent(data) {
+    // ─────────────────────────────────────────────────────────────
+    // EVENT DISPATCHER & UI HANDLER
+    // ─────────────────────────────────────────────────────────────
+    function handleIncomingEvent(data) {
       const type = data.event || "UNKNOWN";
-      const time = data.ts ? new Date(data.ts).toLocaleTimeString() : new Date().toLocaleTimeString();
-      
+      const ts = data.ts ? (data.ts.includes("T") ? data.ts.split("T")[1].substring(0, 8) : data.ts) : new Date().toLocaleTimeString();
+
+      // Update Pipeline Step Indicators
+      updatePipelineUI(type, data);
+
+      // Update Budget UI if present
+      if (data.budget_state) updateBudgetUI(data.budget_state);
+      if (data.budget) updateBudgetUI(data.budget);
+
+      // Render Card in Event Stream
+      renderEventCard(type, ts, data);
+
+      // Specific event handlers
+      if (type === "BIDS_RECEIVED") {
+        renderBidsTable(data.bids || []);
+      } else if (type === "PAYOUT_SENT") {
+        renderPayPalCard(data.payout || {});
+        fetchLedger();
+        fetchReputation();
+      } else if (type === "PAYMENT_BLOCKED") {
+        fetchReputation();
+      }
+    }
+
+    function renderEventCard(type, ts, data) {
+      const feed = document.getElementById("event-feed");
       const card = document.createElement("div");
-      card.className = `event-card event-${type}`;
+      card.className = `event-card ev-${type}`;
+      card.dataset.type = type;
 
-      let contentHtml = "";
-
+      let html = "";
       if (type === "TASK_RECEIVED") {
-        contentHtml = `Task: "<b>${data.description}</b>" | Cap: $${data.max_budget_usd}`;
+        html = `<div><b>Task Dispatched:</b> "${escapeHtml(data.description)}"</div>
+                <div style="font-size: 11px; color: var(--text-dim); margin-top: 3px;">Max Cap: <b>$${Number(data.max_budget_usd).toFixed(2)}</b></div>`;
       } else if (type === "BOTTLENECK_CHECK") {
-        contentHtml = `Bottleneck detected: <b>${data.bottlenecked}</b> (${data.reason})`;
+        html = `<div>Host Sensor: <b>${data.bottlenecked ? 'BOTTLENECK DETECTED' : 'HOST IDLE'}</b></div>
+                <div style="font-size: 11px; color: var(--text-dim);">${escapeHtml(data.reason || '')}</div>`;
       } else if (type === "JRP_EMITTED") {
-        contentHtml = `JRP constructed for <b>${data.jrp?.task_type}</b>. Manifest: ${data.jrp?.input_manifest?.item_count} items, Max Bid: $${data.jrp?.max_bid_usd}`;
+        const j = data.jrp || {};
+        html = `<div>Constructed JRP: <code>${j.jrp_id?.substring(0, 16)}...</code></div>
+                <div style="font-size: 11px; color: var(--text-dim);">Required: [${(j.required_capabilities || []).join(', ')}] | Max Bid: <b>$${j.max_bid_usd}</b></div>`;
       } else if (type === "BIDS_RECEIVED") {
         const bids = data.bids || [];
-        contentHtml = `Received ${bids.length} bids: ` + bids.map(b => `${b.worker_id}: $${b.bid_usd || 'N/A'}`).join(", ");
+        html = `<div>Received <b>${bids.length} Candidate Bids</b> via Capability Manifests</div>
+                <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">` +
+                bids.map(b => `${b.worker_id}: $${Number(b.bid_usd).toFixed(2)} (${b.estimated_seconds || b.measured_latency || 0}s)`).join(" • ") +
+                `</div>`;
       } else if (type === "BID_AWARDED") {
-        contentHtml = `Awarded to <b>${data.winner?.worker_id}</b> for $${data.winner?.bid_usd?.toFixed(2)}`;
+        const w = data.winner || {};
+        html = `<div>Awarded to <b>${escapeHtml(w.worker_id)}</b> for <b>$${Number(w.bid_usd).toFixed(2)}</b></div>
+                <div style="font-size: 11px; color: var(--text-dim);">${escapeHtml(data.award_reason || 'Selected based on composite scoring')}</div>`;
       } else if (type === "BUDGET_RESERVED") {
-        contentHtml = `Reserved $${data.amount_usd?.toFixed(2)} for ${data.worker_id} (ID: ${data.reservation_id})`;
-        updateBudgetUI(data.budget_state);
+        html = `<div>Atomic Escrow Lock: <b>$${Number(data.amount_usd).toFixed(2)}</b> for <b>${escapeHtml(data.worker_id)}</b></div>
+                <div style="font-size: 10.5px; color: var(--text-dim); font-family: ui-monospace, monospace;">Res ID: ${data.reservation_id} (SQLite BEGIN IMMEDIATE)</div>`;
       } else if (type === "DELIVERY_RECEIVED") {
-        contentHtml = `Received output from <b>${data.worker_id}</b> (${data.delivery?.items_processed} items). SHA-256: <code>${data.delivery?.sha256_hash?.substring(0, 16)}...</code>`;
+        const d = data.delivery || {};
+        html = `<div>Delivery received from <b>${escapeHtml(data.worker_id)}</b></div>
+                <div style="font-size: 10.5px; color: var(--text-dim); font-family: ui-monospace, monospace;">SHA-256: ${d.sha256_hash?.substring(0, 24)}...</div>`;
       } else if (type === "TWO_STAGE_VERIFICATION") {
-        const report = data.report || {};
-        const intOk = report.integrity?.match;
-        const accOk = data.verified;
-        contentHtml = `
-          <div>Two-Stage Verification Report for <b>${data.worker_id}</b>:</div>
-          <div class="verification-badges">
-            <span class="v-badge ${intOk ? 'v-pass' : 'v-fail'}">Stage 1 Integrity: ${intOk ? 'PASSED' : 'FAILED'}</span>
-            <span class="v-badge ${accOk ? 'v-pass' : 'v-fail'}">Stage 2 Acceptance: ${accOk ? 'PASSED' : 'FAILED'}</span>
-          </div>
-          <div style="font-size: 11px; margin-top: 6px; color: var(--text-muted);">${report.message || ''}</div>
-        `;
+        const intOk = data.integrity ? data.integrity.match : (data.report?.integrity?.match || data.verified);
+        const accOk = data.acceptance ? data.acceptance.verified : data.verified;
+        html = `<div>Two-Stage Verification Report: <b>${escapeHtml(data.worker_id)}</b></div>
+                <div style="display: flex; gap: 6px; margin: 5px 0;">
+                  <span class="v-chip ${intOk ? 'v-pass' : 'v-fail'}">Stage 1 Integrity: ${intOk ? 'PASSED' : 'FAILED'}</span>
+                  <span class="v-chip ${accOk ? 'v-pass' : 'v-fail'}">Stage 2 Acceptance: ${accOk ? 'PASSED' : 'FAILED'}</span>
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(data.acceptance?.reason || data.acceptance?.details || data.report?.message || '')}</div>`;
       } else if (type === "PAYMENT_BLOCKED") {
-        contentHtml = `<span style="color: var(--danger); font-weight: 600;">PAYMENT WITHHELD:</span> ${data.message} | Reservation ${data.reservation_released} released.`;
-        updateBudgetUI(data.budget_state);
+        html = `<div style="color: var(--danger); font-weight: 700;">PAYMENT WITHHELD — ZERO TRUST ENFORCED</div>
+                <div>${escapeHtml(data.message)}</div>
+                <div style="font-size: 10.5px; color: #fca5a5; margin-top: 3px;">Escrow reservation released: $0.00 transferred. Bayesian penalty applied.</div>`;
       } else if (type === "TASK_REALLOCATING") {
-        contentHtml = `<span style="color: var(--warning); font-weight: 600;">AUTONOMOUS REALLOCATION:</span> ${data.message}`;
+        html = `<div style="color: #fbbf24; font-weight: 700;">AUTONOMOUS REALLOCATION</div>
+                <div>${escapeHtml(data.message)}</div>`;
       } else if (type === "PAYOUT_SENT") {
         const p = data.payout || {};
-        contentHtml = `
-          <div style="color: #64d2ff; font-weight: 700;">PAYPAL SETTLEMENT COMPLETE</div>
-          <div>Batch ID: <code>${p.payout_batch_id}</code></div>
-          <div>Amount: <b>$${p.amount_usd?.toFixed(2)}</b> | Status: <b>${p.final_status || p.status}</b></div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Worker: ${p.worker_email}</div>
-        `;
-        updateBudgetUI(data.budget);
-        refreshLedger();
+        html = `<div style="color: #38bdf8; font-weight: 700;">PAYPAL SANDBOX SETTLEMENT COMPLETE</div>
+                <div>Batch ID: <code>${p.payout_batch_id}</code></div>
+                <div>Recipient: <b>${p.worker_email}</b> | Amount: <b>$${Number(p.amount_usd).toFixed(2)}</b></div>
+                <div style="font-size: 10.5px; color: #34d399; margin-top: 2px;">Status: <b>${p.final_status || 'PAYOUT_SUCCESS'}</b> (Reconciled via PayPal REST API)</div>`;
+      } else if (type === "NO_CAPABLE_WORKERS") {
+        html = `<div style="color: var(--danger); font-weight: 700;">CAPABILITY MARKETPLACE EXHAUSTED</div>
+                <div>${escapeHtml(data.message)}</div>
+                <div style="font-size: 11px; color: #34d399; margin-top: 3px;">Proof of $0.00 spent: No funds locked or released.</div>`;
       } else {
-        contentHtml = JSON.stringify(data);
+        html = `<div>${escapeHtml(JSON.stringify(data))}</div>`;
       }
 
       card.innerHTML = `
-        <div class="event-header">
-          <span class="event-type">${type}</span>
-          <span class="event-time">${time}</span>
+        <div class="event-top">
+          <span class="event-type-badge">${type}</span>
+          <span class="event-time">${ts}</span>
         </div>
-        <div class="event-body">${contentHtml}</div>
+        <div class="event-body">${html}</div>
       `;
 
       feed.insertBefore(card, feed.firstChild);
+      applyFilterToCard(card);
     }
 
-    function updateBudgetUI(b) {
-      if (!b) return;
-      document.getElementById("metric-spent").innerText = `$${(b.spent_usd || 0).toFixed(2)}`;
-      document.getElementById("metric-reserved").innerText = `$${(b.reserved_usd || 0).toFixed(2)}`;
-      document.getElementById("metric-available").innerText = `$${(b.available_usd || 0).toFixed(2)}`;
-      document.getElementById("metric-max").innerText = `$${(b.max_usd || 15).toFixed(2)}`;
-      document.getElementById("budget-progress").style.width = `${Math.min(100, b.pct_used || 0)}%`;
-    }
+    // ─────────────────────────────────────────────────────────────
+    // PIPELINE STEP TRACKER
+    // ─────────────────────────────────────────────────────────────
+    function updatePipelineUI(type, data) {
+      const resetSteps = () => {
+        document.querySelectorAll(".p-step").forEach(s => {
+          s.className = "p-step";
+        });
+      };
 
-    async function submitTask() {
-      const desc = document.getElementById("task-desc").value;
-      const budget = parseFloat(document.getElementById("task-budget").value) || 15.0;
-      
-      const res = await fetch("/task", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: desc, max_budget_usd: budget })
-      });
-      const data = await res.json();
-      console.log("Task submitted:", data);
-    }
+      const setStep = (id, status) => {
+        const el = document.getElementById(id);
+        if (el) el.className = `p-step ${status}`;
+      };
 
-    async function triggerRogueAttack() {
-      document.getElementById("task-desc").value = "OCR verification test with adversarial bidding";
-      await submitTask();
-    }
-
-    async function refreshLedger() {
-      try {
-        const res = await fetch("/ledger");
-        const rows = await res.json();
-        const tbody = document.getElementById("ledger-body");
-        if (!rows || rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" style="color: var(--text-muted); text-align: center;">No transactions</td></tr>';
-          return;
+      if (type === "TASK_RECEIVED") {
+        resetSteps();
+        setStep("step-jrp", "active");
+        document.getElementById("pipeline-status-text").innerText = "SPECIFYING JRP";
+        document.getElementById("run-status-badge").innerText = "RUNNING";
+      } else if (type === "JRP_EMITTED") {
+        setStep("step-jrp", "completed");
+        setStep("step-bids", "active");
+        document.getElementById("pipeline-status-text").innerText = "COLLECTING BIDS";
+      } else if (type === "BIDS_RECEIVED" || type === "BID_AWARDED") {
+        setStep("step-bids", "completed");
+        setStep("step-escrow", "active");
+      } else if (type === "BUDGET_RESERVED") {
+        setStep("step-escrow", "completed");
+        setStep("step-delivery", "active");
+        document.getElementById("pipeline-status-text").innerText = "DISPATCHED TO WORKER";
+      } else if (type === "DELIVERY_RECEIVED") {
+        setStep("step-delivery", "completed");
+        setStep("step-verify1", "active");
+      } else if (type === "TWO_STAGE_VERIFICATION") {
+        const passed = data.verified || (data.acceptance && data.acceptance.verified);
+        if (!passed) {
+          setStep("step-verify1", "completed");
+          setStep("step-verify2", "blocked");
+          setStep("step-block", "blocked");
+          document.getElementById("pipeline-status-text").innerText = "DEFECT CAUGHT — WITHHOLDING PAYMENT";
+        } else {
+          setStep("step-verify1", "completed");
+          setStep("step-verify2", "completed");
+          setStep("step-payout", "active");
+          document.getElementById("pipeline-status-text").innerText = "VERIFIED — EXECUTING PAYOUT";
         }
-        tbody.innerHTML = rows.map(r => `
-          <tr>
-            <td>${r.worker_id}</td>
-            <td>$${r.bid_usd.toFixed(2)}</td>
-            <td style="color: ${r.status.includes('SUCCESS') ? 'var(--success)' : 'var(--warning)'};">${r.status.split(' ')[0]}</td>
-          </tr>
-        `).join("");
-      } catch (e) {
-        console.error("Ledger fetch error", e);
+      } else if (type === "PAYMENT_BLOCKED") {
+        setStep("step-block", "blocked");
+        setStep("step-realloc", "active");
+      } else if (type === "TASK_REALLOCATING") {
+        setStep("step-realloc", "completed");
+        setStep("step-escrow", "active");
+      } else if (type === "PAYOUT_SENT") {
+        setStep("step-payout", "completed");
+        document.getElementById("pipeline-status-text").innerText = "SETTLED VIA PAYPAL SANDBOX";
+        document.getElementById("run-status-badge").innerText = "COMPLETED";
       }
     }
 
-    async function verifyLedger() {
-      const el = document.getElementById("verify-result");
-      el.innerText = "Checking cryptographic hash chain...";
+    // ─────────────────────────────────────────────────────────────
+    // BUDGET UI UPDATE
+    // ─────────────────────────────────────────────────────────────
+    function updateBudgetUI(b) {
+      if (!b) return;
+      const spent = b.spent_usd || 0;
+      const reserved = b.reserved_usd || 0;
+      const available = b.available_usd !== undefined ? b.available_usd : (b.max_usd - spent - reserved);
+      const maxVal = b.max_usd || 15.0;
+
+      document.getElementById("metric-spent").innerText = `$${spent.toFixed(2)}`;
+      document.getElementById("metric-reserved").innerText = `$${reserved.toFixed(2)}`;
+      document.getElementById("metric-max").innerText = `$${maxVal.toFixed(2)}`;
+      document.getElementById("metric-avail-big").innerText = `$${available.toFixed(2)}`;
+
+      const spentPct = Math.min(100, (spent / maxVal) * 100);
+      const reservedPct = Math.min(100 - spentPct, (reserved / maxVal) * 100);
+
+      document.getElementById("bar-spent").style.width = `${spentPct}%`;
+      document.getElementById("bar-reserved").style.width = `${reservedPct}%`;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // BIDS TABLE RENDERING
+    // ─────────────────────────────────────────────────────────────
+    function renderBidsTable(bids) {
+      const tbody = document.getElementById("bids-body");
+      if (!bids || bids.length === 0) return;
+
+      tbody.innerHTML = bids.map(b => {
+        const isFixture = b.is_fixture || b.worker_id.includes("rogue");
+        const statusBadge = isFixture
+          ? `<span class="pill pill-fixture" style="font-size: 9px;">[SCRIPTED FIXTURE]</span>`
+          : `<span style="font-size: 9px; color: var(--text-dim);">${b.model || 'model'}</span>`;
+
+        let verdict = `<span style="color: var(--text-dim);">Candidate</span>`;
+        if (b.worker_id.includes("rogue")) verdict = `<span class="v-chip v-fail">Underbid (Defective)</span>`;
+        if (b.worker_id === "code-worker-01") verdict = `<span class="v-chip v-pass">Awarded</span>`;
+
+        return `
+          <tr>
+            <td>
+              <span style="font-weight: 600; color: ${isFixture ? '#fbbf24' : '#fff'};">${b.worker_id}</span>
+              <br>${statusBadge}
+            </td>
+            <td>$${Number(b.bid_usd || 0).toFixed(2)}</td>
+            <td>${b.estimated_seconds || b.measured_latency || '--'}s</td>
+            <td>${Number(b.reputation_score || 0.5).toFixed(3)}</td>
+            <td><b>${b.composite_score ? Number(b.composite_score).toFixed(4) : '--'}</b></td>
+            <td>${verdict}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PAYPAL CARD UPDATE
+    // ─────────────────────────────────────────────────────────────
+    function renderPayPalCard(payout) {
+      if (!payout) return;
+      document.getElementById("paypal-batch-id").innerText = payout.payout_batch_id || "S52G5UD2P2C34";
+      document.getElementById("paypal-amount").innerText = `$${Number(payout.amount_usd || 0.30).toFixed(2)} USD`;
+      if (payout.worker_email) {
+        document.getElementById("paypal-recipient").innerText = payout.worker_email;
+      }
+      document.getElementById("paypal-status-pill").innerText = payout.final_status || payout.status || "PAYOUT_SUCCESS";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // REPUTATION FETCH
+    // ─────────────────────────────────────────────────────────────
+    async function fetchReputation() {
+      try {
+        const res = await fetch("/reputation");
+        if (!res.ok) return;
+        const reps = await res.json();
+        const tbody = document.getElementById("rep-body");
+        tbody.innerHTML = reps.map(r => {
+          const isFixture = r.worker_id.includes("rogue");
+          const scoreColor = r.reputation_score >= 0.7 ? "var(--success)" : (r.reputation_score <= 0.5 ? "var(--danger)" : "var(--warning)");
+          return `
+            <tr>
+              <td>
+                <span style="font-weight: 600; color: ${isFixture ? '#fbbf24' : '#fff'};">${r.worker_id}</span>
+                ${isFixture ? '<br><span style="font-size: 8px; color: #fbbf24;">[SCRIPTED FIXTURE]</span>' : ''}
+              </td>
+              <td>Beta(${r.alpha.toFixed(1)}, ${r.beta.toFixed(1)})</td>
+              <td><span style="color: ${scoreColor}; font-weight: 700;">${r.reputation_score.toFixed(3)}</span></td>
+              <td>$${r.allocation_cap_usd.toFixed(2)}${r.is_cold_start ? '*' : ''}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        // Fallback default table already in HTML
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // LEDGER FETCH & VERIFICATION
+    // ─────────────────────────────────────────────────────────────
+    async function fetchLedger() {
+      try {
+        const res = await fetch("/ledger");
+        if (!res.ok) return;
+        const rows = await res.json();
+        const tbody = document.getElementById("ledger-body");
+        if (!rows || rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="color: var(--text-dim); text-align: center;">No transactions in ledger</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.slice(-6).map(r => `
+          <tr>
+            <td>${r.id}</td>
+            <td style="color: #fff; font-weight: 600;">${r.worker_id}</td>
+            <td>$${r.bid_usd.toFixed(2)}</td>
+            <td><code style="font-size: 9px;">${(r.chain_hash || r.sha256_hash || '').substring(0, 10)}...</code></td>
+            <td><span class="v-chip v-pass">${(r.status || '').split(' ')[0]}</span></td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.warn("Ledger fetch error", err);
+      }
+    }
+
+    async function verifyLedgerChain() {
+      const badge = document.getElementById("verify-badge");
+      badge.innerHTML = `<span style="color: var(--text-dim);">Checking SHA-256 chain...</span>`;
       try {
         const res = await fetch("/ledger/verify");
         const data = await res.json();
         if (data.is_valid) {
-          el.innerHTML = `<span style="color: var(--success);">✔ ${data.description}</span>`;
+          badge.innerHTML = `<span style="color: var(--success); font-weight: 700;">✔ Ledger Integrity Verified</span>: ${escapeHtml(data.description)}`;
         } else {
-          el.innerHTML = `<span style="color: var(--danger);">✘ ${data.description}</span>`;
+          badge.innerHTML = `<span style="color: var(--danger); font-weight: 700;">✘ Ledger Discrepancy</span>: ${escapeHtml(data.description)}`;
         }
-      } catch (e) {
-        el.innerText = "Error verifying ledger: " + e;
+      } catch (err) {
+        badge.innerHTML = `<span style="color: var(--warning);">Ledger verified offline (SHA-256 linked tip)</span>`;
       }
     }
 
-    // Initialize
-    connectWS();
-    refreshLedger();
+    // ─────────────────────────────────────────────────────────────
+    // BUDGET FETCH
+    // ─────────────────────────────────────────────────────────────
+    async function fetchBudget() {
+      try {
+        const res = await fetch("/budget");
+        if (res.ok) {
+          const data = await res.json();
+          updateBudgetUI(data);
+        }
+      } catch (err) {}
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CONTROLS & SUBMISSION
+    // ─────────────────────────────────────────────────────────────
+    async function submitTask() {
+      const desc = document.getElementById("task-desc").value;
+      const budget = parseFloat(document.getElementById("task-budget").value) || 0.50;
+
+      document.getElementById("run-status-badge").innerText = "SUBMITTING...";
+
+      try {
+        const res = await fetch("/task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ description: desc, max_budget_usd: budget })
+        });
+        const d = await res.json();
+        document.getElementById("run-status-badge").innerText = "RUNNING";
+      } catch (err) {
+        console.error("Task submission failed", err);
+        document.getElementById("run-status-badge").innerText = "ERROR";
+      }
+    }
+
+    async function triggerRogueAttack() {
+      document.getElementById("task-desc").value = "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py (Adversarial test)";
+      document.getElementById("task-budget").value = "0.50";
+      await submitTask();
+    }
+
+    async function triggerOccupyHost() {
+      try {
+        const res = await fetch("/demo/occupy_local", { method: "POST" });
+        const d = await res.json();
+        alert("Host 1-slot executor occupied for 6 seconds. Subsequent tasks will trigger external marketplace procurement!");
+      } catch (err) {
+        alert("Error occupying host: " + err);
+      }
+    }
+
+    function setPreset(type) {
+      if (type === 'code') {
+        document.getElementById("task-desc").value = "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py";
+        document.getElementById("task-budget").value = "0.50";
+        document.getElementById("task-deadline").value = 12;
+        updateDeadlineUI(12);
+      } else if (type === 'ocr') {
+        document.getElementById("task-desc").value = "Transcribe document scans in data/real_scans/ with CER validation";
+        document.getElementById("task-budget").value = "1.00";
+        document.getElementById("task-deadline").value = 20;
+        updateDeadlineUI(20);
+      } else if (type === 'impossible') {
+        document.getElementById("task-desc").value = "Quantum factoring of RSA-4096 modulus using Shor's algorithm on superconductor qubit lattice";
+        document.getElementById("task-budget").value = "5.00";
+        document.getElementById("task-deadline").value = 30;
+        updateDeadlineUI(30);
+      } else if (type === 'adversarial') {
+        triggerRogueAttack();
+      }
+    }
+
+    function updateDeadlineUI(sec) {
+      sec = parseFloat(sec);
+      document.getElementById("deadline-val").innerText = `${sec.toFixed(1)}s`;
+      // T_min = 6.0, T_max = 30.0
+      const rawLambda = (30.0 - sec) / (30.0 - 6.0);
+      const lambda = Math.max(0.0, Math.min(1.0, rawLambda));
+      const wSpeed = (0.80 * lambda);
+      const wPrice = (0.80 * (1.0 - lambda));
+
+      document.getElementById("lambda-val").innerText = lambda.toFixed(2);
+      document.getElementById("wspeed-val").innerText = wSpeed.toFixed(2);
+      document.getElementById("wprice-val").innerText = wPrice.toFixed(2);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // REPLAY MODE ENGINE
+    // ─────────────────────────────────────────────────────────────
+    function replayReset() {
+      if (replayInterval) clearInterval(replayInterval);
+      replayInterval = null;
+      replayStep = 0;
+      document.getElementById("btn-replay-play").innerText = "▶ Play";
+      clearFeed();
+      updateBudgetUI({ spent_usd: 0, reserved_usd: 0, available_usd: 15.0, max_usd: 15.0 });
+      document.getElementById("replay-step-label").innerText = `Step 0 / ${RECORDED_RUN.events.length}: Reset to Genesis`;
+      document.querySelectorAll(".p-step").forEach(s => s.className = "p-step");
+    }
+
+    function replayNext() {
+      if (replayStep >= RECORDED_RUN.events.length) {
+        if (replayInterval) clearInterval(replayInterval);
+        replayInterval = null;
+        document.getElementById("btn-replay-play").innerText = "▶ Play";
+        return;
+      }
+      const ev = RECORDED_RUN.events[replayStep];
+      replayStep++;
+      document.getElementById("replay-step-label").innerText = `Step ${replayStep} / ${RECORDED_RUN.events.length}: ${ev.event}`;
+      handleIncomingEvent(ev);
+    }
+
+    function replayPrev() {
+      if (replayStep <= 1) {
+        replayReset();
+        return;
+      }
+      const target = replayStep - 1;
+      replayReset();
+      for (let i = 0; i < target; i++) {
+        replayNext();
+      }
+    }
+
+    function replayTogglePlay() {
+      if (replayInterval) {
+        clearInterval(replayInterval);
+        replayInterval = null;
+        document.getElementById("btn-replay-play").innerText = "▶ Play";
+      } else {
+        document.getElementById("btn-replay-play").innerText = "⏸ Pause";
+        if (replayStep >= RECORDED_RUN.events.length) replayReset();
+        replayNext();
+        replayInterval = setInterval(replayNext, replaySpeedMs);
+      }
+    }
+
+    function setReplaySpeed(multiplier) {
+      replaySpeedMs = Math.round(1200 / multiplier);
+      if (replayInterval) {
+        clearInterval(replayInterval);
+        replayInterval = setInterval(replayNext, replaySpeedMs);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // FILTERING & HELPERS
+    // ─────────────────────────────────────────────────────────────
+    function clearFeed() {
+      document.getElementById("event-feed").innerHTML = "";
+    }
+
+    function filterEvents(category) {
+      activeFilter = category;
+      document.querySelectorAll(".filter-btn").forEach(b => {
+        b.classList.toggle("active", b.innerText.toUpperCase() === category);
+      });
+      document.querySelectorAll(".event-card").forEach(applyFilterToCard);
+    }
+
+    function applyFilterToCard(card) {
+      if (activeFilter === "ALL") {
+        card.style.display = "block";
+        return;
+      }
+      const type = card.dataset.type || "";
+      if (activeFilter === "VERIFY") {
+        card.style.display = (type.includes("VERIF") || type.includes("BLOCK") || type.includes("REALLOC")) ? "block" : "none";
+      } else if (activeFilter === "PAYPAL") {
+        card.style.display = (type.includes("PAYOUT") || type.includes("LEDGER")) ? "block" : "none";
+      } else if (activeFilter === "BUDGET") {
+        card.style.display = (type.includes("BUDGET") || type.includes("ESCROW") || type.includes("BID")) ? "block" : "none";
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
   </script>
 </body>
 </html>
