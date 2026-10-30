@@ -62,9 +62,9 @@ async def bid(jrp: dict):
     est_in = estimate_tokens(full_text)
     est_out = 350
 
-    # Fast 20B pricing rule: lower fee ($0.25) and cheaper token rates
+    # Fast 20B pricing rule: lower operational fee ($0.22) and cheaper token rates
     raw_cost = GLOBAL_API_METER.calculate_cost(GROQ_MODEL_20B, est_in, est_out)
-    bid_price = max(0.25, round(raw_cost * 1.25 + 0.25, 2))
+    bid_price = max(0.22, round(raw_cost * 1.25 + 0.22, 2))
 
     max_bid = float(jrp.get("max_bid_usd", 5.0))
     if bid_price > max_bid:
@@ -74,12 +74,13 @@ async def bid(jrp: dict):
         "worker_id": WORKER_ID,
         "status": "BID",
         "bid_usd": bid_price,
-        "estimated_seconds": 1.2,
+        "estimated_seconds": 9.0,
+        "measured_latency": 9.02,
         "estimated_tokens": est_in + est_out,
         "model": GROQ_MODEL_20B,
-        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.25 fee = ${bid_price:.2f}",
-        "capability_proof": [f"groq-{GROQ_MODEL_20B}", "ast-syntax-verified", "low-latency"],
-        "reputation_score": 0.95,
+        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.22 fee = ${bid_price:.2f}",
+        "capability_proof": [f"groq-{GROQ_MODEL_20B}", "ast-syntax-verified", "cheaper-token-rate"],
+        "reputation_score": 0.385,
         "worker_paypal_email": CODE_WORKER_20B_PAYPAL_EMAIL,
     }
 

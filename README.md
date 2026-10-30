@@ -55,10 +55,21 @@ Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to retu
 - **Measured Accuracy & Cost Finding**: Alpha and Beta perform essentially identically on accuracy ($0.44\%$ vs $0.51\%$ average CER across all 5 test documents; no significant quality tradeoff exists between them). Beta offers a lower upfront compute rate ($\$0.65$ vs $\$0.70$).
 - **Live Settlement Demo Selection**: The settlement demo specifically uses `doc_04.png`—a document where both honest workers achieve $0.00\%$ CER—ensuring that honest workers pass acceptance criteria on legitimate OCR execution, while the rogue underbidder is rejected strictly due to deliberate defect injection.
 
-### Task Family 2: Python Code Generation (`code-worker-01`)
-- **Real LLM Generation**: Uses live Groq API inference (`openai/gpt-oss-120b`) to synthesize production Python code.
-- **Explainable Token Bidding**: Bids are computed from token volume, model API rates, and an operational fee.
-- **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions.
+### Task Family 2: Python Code Generation (`code-worker-01` vs `code-worker-02`)
+Two genuinely differentiated code generation workers running on different model tiers:
+- **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Operational fee $F_{\text{min}} = \$0.30$.
+- **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Operational fee $F_{\text{min}} = \$0.22$.
+
+#### Empirical 10-Run Benchmark (10 Live Calls Per Model)
+Measured via `scripts/benchmark_10_runs_code_workers.py` on the financial billing module (`demo_repos/billing_engine`):
+| Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Real-World Tradeoff |
+| :--- | :--- | :--- | :--- |
+| **Pass Rate (5/5 Hidden Tests)** | **10 / 10 (100.0%)** | **3 / 10 (30.0%)** | 120B has **3.3x higher reliability** on intricate edge-case logic. |
+| **Failures Encountered** | **0 failures** | **7 failures** | 20B repeatedly reproduced naive month rollover without clamping. |
+| **Average Measured Latency** | **4.6655s** | **9.0201s** | 20B generated verbose reasoning loops (passing runs avg 10.67s; failing runs avg 8.31s). |
+| **Average Actual Cost per Call** | **$0.00177 USD** | **$0.00171 USD** | Minor token cost difference; operational base fee dominates. |
+
+- **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions. Workers never receive hidden test files in the JRP.
 
 ### Task Family 3: LLM-Generated Answers with Citation Checks (`llm-worker-01`)
 - **Architecture**: **LLM-generated answers with citation checks (No Fetching or Research Daemon)**.

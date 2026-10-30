@@ -64,10 +64,10 @@ async def bid(jrp: dict):
     # EXPLAINABLE MARGIN RULE:
     #   Raw API Token Cost:     C_api = (est_in * P_in + est_out * P_out)
     #   Compute Risk Multiplier: M = 1.25 (25% buffer for token variance and network latency)
-    #   Minimum Operational Fee: F_min = $0.35 (high-capacity 120B model uptime, deep reasoning sandbox)
+    #   Minimum Operational Fee: F_min = $0.30 (high-capacity 120B model uptime, deep reasoning sandbox)
     #   Bid Formula:            Bid = min(max_bid, round(max(F_min, (C_api * M) + F_min), 2))
     raw_cost = GLOBAL_API_METER.calculate_cost(GROQ_MODEL, est_in, est_out)
-    bid_price = max(0.35, round(raw_cost * 1.25 + 0.35, 2))
+    bid_price = max(0.30, round(raw_cost * 1.25 + 0.30, 2))
 
     max_bid = float(jrp.get("max_bid_usd", 5.0))
     if bid_price > max_bid:
@@ -77,12 +77,13 @@ async def bid(jrp: dict):
         "worker_id": WORKER_ID,
         "status": "BID",
         "bid_usd": bid_price,
-        "estimated_seconds": 3.5,
+        "estimated_seconds": 4.5,
+        "measured_latency": 4.67,
         "estimated_tokens": est_in + est_out,
         "model": GROQ_MODEL,
-        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.35 fee = ${bid_price:.2f}",
-        "capability_proof": [f"groq-{GROQ_MODEL}", "ast-syntax-verified"],
-        "reputation_score": 0.98,
+        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.30 fee = ${bid_price:.2f}",
+        "capability_proof": [f"groq-{GROQ_MODEL}", "ast-syntax-verified", "high-capacity-reasoning"],
+        "reputation_score": 0.923,
         "worker_paypal_email": CODE_WORKER_PAYPAL_EMAIL,
     }
 
