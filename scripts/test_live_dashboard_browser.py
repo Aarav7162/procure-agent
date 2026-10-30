@@ -176,6 +176,70 @@ def run_browser_tests():
             page.screenshot(path=os.path.join(SCREENSHOT_DIR, "05_replay_mode_playback.png"))
             print("  [Screenshot] Saved 05_replay_mode_playback.png")
 
+            # ─────────────────────────────────────────────────────────────
+            # Action 6: Incidents & Threat Dossier Page
+            # ─────────────────────────────────────────────────────────────
+            print("\n  [Test 6] Navigating to Incidents & Threats page...")
+            page.click("#nav-incidents")
+            time.sleep(0.5)
+            assert page.is_visible("#page-incidents")
+            incidents_text = page.locator("#page-incidents").inner_text()
+            assert "ROGUE_WORKER_01" in incidents_text
+            assert "GATE 4 ASSERTIONS" in incidents_text
+            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "06_incidents_threat_dossier.png"))
+            print("  [Screenshot] Saved 06_incidents_threat_dossier.png")
+
+            # ─────────────────────────────────────────────────────────────
+            # Action 7: Fleet Monitoring Page & Microservice Ping
+            # ─────────────────────────────────────────────────────────────
+            print("\n  [Test 7] Navigating to Fleet Telemetry & triggering node ping...")
+            page.click("#nav-monitoring")
+            time.sleep(0.5)
+            assert page.is_visible("#page-monitoring")
+            page.click("#btn-ping-fleet")
+            time.sleep(1.0)
+            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "07_fleet_telemetry_monitoring.png"))
+            print("  [Screenshot] Saved 07_fleet_telemetry_monitoring.png")
+
+            # ─────────────────────────────────────────────────────────────
+            # Action 8: Audit Ledger Page & Tamper-Evident Chain Proof
+            # ─────────────────────────────────────────────────────────────
+            print("\n  [Test 8] Navigating to Audit Ledger & verifying hash chain...")
+            page.click("#nav-audit")
+            time.sleep(0.5)
+            assert page.is_visible("#page-audit")
+            page.click("#btn-verify-chain")
+            time.sleep(0.5)
+            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "08_audit_ledger_chain_proof.png"))
+            print("  [Screenshot] Saved 08_audit_ledger_chain_proof.png")
+
+            # ─────────────────────────────────────────────────────────────
+            # Action 9: Settings & Policies Page
+            # ─────────────────────────────────────────────────────────────
+            print("\n  [Test 9] Navigating to Settings & Policies...")
+            page.click("#nav-settings")
+            time.sleep(0.5)
+            assert page.is_visible("#page-settings")
+            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "09_governance_settings.png"))
+            print("  [Screenshot] Saved 09_governance_settings.png")
+
+            # ─────────────────────────────────────────────────────────────
+            # Action 10: Return to Command Centre & Verify Horizontal Registry
+            # ─────────────────────────────────────────────────────────────
+            print("\n  [Test 10] Returning to Command Centre and testing registry filter...")
+            page.click("#nav-command")
+            time.sleep(0.5)
+            page.click("button.filter-tab:has-text('Code Gen')")
+            time.sleep(0.3)
+            # Verify ocr row is hidden, code row is visible
+            ocr_vis = page.locator("#rep-body-full tr:has-text('ocr-worker-01')").is_visible()
+            code_vis = page.locator("#rep-body-full tr:has-text('code-worker-01')").is_visible()
+            assert code_vis is True
+            assert ocr_vis is False
+            print("  -> Verified: Category filter properly shows Code Gen and hides OCR!")
+            page.click("button.filter-tab:has-text('All Workers')")
+            time.sleep(0.3)
+
             browser.close()
 
         print("\n" + "=" * 70)

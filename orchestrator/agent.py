@@ -14,7 +14,7 @@ import json
 import httpx
 from datetime import datetime, timezone
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -87,7 +87,10 @@ async def websocket_endpoint(ws: WebSocket):
 @app.get("/minimal")
 async def get_dashboard():
     dashboard_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "index.html"))
-    return FileResponse(dashboard_file)
+    if not os.path.exists(dashboard_file):
+        return HTMLResponse(content="<h1>Dashboard file not found</h1>", status_code=404)
+    with open(dashboard_file, "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
 class TaskRequest(BaseModel):
     description: str
@@ -141,6 +144,22 @@ async def get_ledger():
 async def verify_ledger():
     valid, desc, details = verify_ledger_chain()
     return {"is_valid": valid, "description": desc, "details": details}
+
+
+@app.post("/reconcile_payouts")
+@app.get("/reconcile_payouts")
+async def reconcile_payouts():
+    rows = get_ledger_rows()
+    reconciled = []
+    for r in rows:
+        batch_id = r.get("payout_batch_id")
+        if batch_id and batch_id != "NONE":
+            try:
+                res = poll_and_reconcile_payout(batch_id, max_attempts=2, interval_sec=0.5)
+                reconciled.append(res)
+            except Exception as e:
+                reconciled.append({"batch_id": batch_id, "error": str(e)})
+    return {"status": "success", "count": len(reconciled), "reconciled": reconciled}
 
 
 @app.get("/reputation")
