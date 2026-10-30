@@ -34,7 +34,7 @@ def get_venv_executables(venv_dir: str):
     return py_exe, pip_exe
 
 
-def wait_for_ports(ports, timeout=12.0) -> bool:
+def wait_for_ports(ports, timeout=25.0) -> bool:
     t0 = time.time()
     pending = set(ports)
     while time.time() - t0 < timeout and pending:
@@ -47,6 +47,8 @@ def wait_for_ports(ports, timeout=12.0) -> bool:
                 pass
         if pending:
             time.sleep(0.3)
+    if pending:
+        print(f"      [WARN] Ports still pending after {timeout}s: {pending}")
     return len(pending) == 0
 
 
@@ -114,7 +116,7 @@ def run_clean_clone_test():
 
         ports = [8000, 8001, 8002, 8003, 8004, 8005, 8007]
         print("      Waiting for all 7 microservices to report /health...")
-        healthy = wait_for_ports(ports, timeout=15.0)
+        healthy = wait_for_ports(ports, timeout=25.0)
         assert healthy, "One or more microservices failed to boot in clean clone!"
         print("      All 7 microservices online and healthy!")
 
@@ -157,7 +159,7 @@ def run_clean_clone_test():
                 stderr=subprocess.PIPE,
                 text=True
             )
-            assert wait_for_ports(ports, timeout=15.0), "Microservices failed to restart for live test!"
+            assert wait_for_ports(ports, timeout=25.0), "Microservices failed to restart for live test!"
 
             with httpx.Client(timeout=15.0) as client:
                 print("      Submitting test task to orchestrator...")

@@ -59,15 +59,18 @@ def main():
 
     try:
         for name, app_module, port in SERVICES:
-            print(f"  [STARTING] {name:<26} on http://127.0.0.1:{port}...", end="", flush=True)
+            print(f"  [LAUNCHING] {name:<26} on http://127.0.0.1:{port}...", flush=True)
             cmd = [sys.executable, "-m", "uvicorn", app_module, "--host", "127.0.0.1", "--port", str(port)]
             p = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             processes.append((name, p, port))
 
-            if wait_for_health(port):
-                print(" [READY]")
+        all_ready = True
+        for name, p, port in processes:
+            if wait_for_health(port, timeout=15.0):
+                print(f"  [ONLINE]    {name:<26} on port {port}")
             else:
-                print(" [TIMED OUT]")
+                print(f"  [TIMEOUT]   {name:<26} on port {port}")
+                all_ready = False
 
         dashboard_url = "http://127.0.0.1:8000/"
 
