@@ -60,54 +60,43 @@ Two genuinely differentiated code generation workers running on different model 
 - **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.30$.
 - **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.22$.
 
-#### Empirical Rolling Benchmark ($N = 25$ Live Calls Per Model)
-ProcureAgent measures code worker performance across a rolling window of 25 live runs per model (including 10 sequential runs, 5 dynamic reallocation runs, and 10 interleaved concurrent runs executing 120B and 20B simultaneously to cancel out cloud queue load):
-| Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Real-World Tradeoff |
+#### Empirical Benchmark by Execution Source ($N = 23$ for 120B, $N = 25$ for 20B)
+ProcureAgent measures code worker performance across verified empirical runs split by execution source:
+- **`code-worker-01` (`openai/gpt-oss-120b`) Total = 23 Runs**:
+  - *Gate 4 Initial Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.71s, cost $0.00185).
+  - *Adversarial Reallocation Invocations*: 3 runs (3 passed, 0 failed, avg latency 3.82s — invoked when 20B failed during 5-run reallocation testing).
+  - *Concurrent Interleaved Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.92s).
+  - **Overall Pass Rate**: **23 / 23 (100.0%)**.
+  - **Bayesian Posterior**: $\text{Beta}(2+23, 1+0) = \text{Beta}(25, 1) \implies \mu = \frac{25}{26} \approx \mathbf{0.9615}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.30$.
+  - **Computed Bid**: $\mathbf{\$0.30}$.
+- **`code-worker-02` (`openai/gpt-oss-20b`) Total = 25 Runs**:
+  - *Gate 4 Initial Benchmark*: 10 runs (3 passed, 7 failed, avg latency 9.02s).
+  - *Adversarial Reallocation Test Suite*: 5 runs (2 passed, 3 failed, avg latency 3.02s).
+  - *Concurrent Interleaved Benchmark*: 10 runs (2 passed, 8 failed, avg latency 4.08s: passing runs 3.39s, failing runs 4.25s).
+  - **Overall Pass Rate**: **7 / 25 (28.0%)** (Pass rate varies heavily by run: 3/10 initial, 2/5 reallocation, 2/10 interleaved).
+  - **Bayesian Posterior**: $\text{Beta}(2+7, 1+18) = \text{Beta}(9, 19) \implies \mu = \frac{9}{28} \approx \mathbf{0.3214}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.22$.
+  - **Computed Bid**: $\mathbf{\$0.22}$.
+
+| Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Empirical Tradeoff |
 | :--- | :--- | :--- | :--- |
-| **Pass Rate (5/5 Hidden Tests)** | **25 / 25 (100.0%)** | **7 / 25 (28.0%)** | 120B has **3.6x higher reliability**. The 20B pass rate varies between runs (3/10 in initial benchmark, 2/5 in reallocation tests, 2/10 in concurrent interleaved tests). |
-| **Rolling Average Latency ($N=25$)** | **4.60s** | **5.84s** | Speed scores are computed from a rolling average across all recorded runs. In isolated low-load concurrent runs, 20B achieved 4.08s (passing runs 3.39s, failing runs 4.25s), but failed 8/10 tests. |
-| **Average Actual Cost per Call** | **$0.00185 USD** (~1,820 tokens) | **$0.00165 USD** (~2,100 tokens) | Negligible token cost variance; the fixed operating fee dominates. |
+| **Pass Rate (5/5 Hidden Tests)** | **23 / 23 (100.0%)** | **7 / 25 (28.0%)** | 120B has **3.6x higher reliability**. The 20B consistently fails month-end date clamping. |
+| **Speed Basis (Last 10 Interleaved Runs)** | **4.92s** | **4.08s** | In concurrent testing, 20B is 0.84s faster, but fails 80% of test cases. |
+| **Bayesian Reputation ($\alpha / (\alpha+\beta)$)** | **0.9615** ($\text{Beta}(25, 1)$) | **0.3214** ($\text{Beta}(9, 19)$) | 120B has earned near-perfect reputation; 20B is heavily penalized for frequent test failure. |
+| **Computed Bid ($C_{\text{api}} \times 1.25 + F_{\text{min}}$)** | **$0.30 USD** | **$0.22 USD** | 20B provides an 8¢ cheaper bid based on lower compute tier. |
 
-- **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions. Workers never receive hidden test files in the JRP.
-
-### Task Family 3: LLM-Generated Answers with Citation Checks (`llm-worker-01`)
-- **Architecture**: **LLM-generated answers with citation checks (No Fetching or Research Daemon)**.
-- **Scope & Boundary**: This family produces structured LLM-generated answers using parametric model intelligence (`openai/gpt-oss-120b`), NOT live web research or browser-based scraping. No crawler, headless browser, or fetching daemon exists.
-- **Verification**: The verifier validates citations via live HTTP GET requests to ensure referenced documentation links return HTTP 200 and contain claimed fact keywords.
-
----
-
-## 4. Economic Model: Explainable Bidding & Margin Rules
-
-To ensure agent bids are not arbitrary fixtures, autonomous worker agents price machine labor using an explicit economic model:
-
-### LLM & Code Worker Bid Formula
-$$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)$$
-
-Where:
-- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.60$/1M input, $\$0.60$/1M output; for `gpt-oss-20b`, $\$0.15$/1M input, $\$0.30$/1M output).
-- **$M_{\text{compute}}$ (Risk & Variance Multiplier)**: $1.25$ (covers token count variance, network latency, and retry overhead).
-- **$F_{\text{min}}$ (Fixed Operating Fee Set Per Worker)**:
-  - $\$0.15$ for `llm-worker-01` (agent uptime, citation validation readiness).
-  - $\$0.22$ for `code-worker-02` (fast 20B model uptime, lower compute footprint).
-  - $\$0.30$ for `code-worker-01` (deep reasoning 120B model uptime, AST compilation, and test execution harness).
-
-*(Note: The $F_{\text{min}}$ floor is inherently satisfied since $C_{\text{api}} \ge 0$ and $F_{\text{min}} > 0$.)*
-
-### Empirical Model Benchmark ($N = 25$ Runs Per Model)
-ProcureAgent empirically benchmarked `openai/gpt-oss-120b` and `openai/gpt-oss-20b` across **25 live runs per model** on the `demo_repos/billing_engine` month-end calendar rollover test suite (5 hidden unit tests):
-- **`openai/gpt-oss-120b`**:
-  - Pass Rate: **25/25 (100.0%)** on Attempt 1.
-  - Rolling Latency ($N=25$): **4.60s**.
-  - Average Cost: **$0.00185 USD** (~1,820 tokens).
-  - Failure Profile: Zero failures across all 25 live calls.
-- **`openai/gpt-oss-20b`**:
-  - Pass Rate: **7/25 (28.0%)** on Attempt 1 (varies between runs: 3/10, 2/5, 2/10).
-  - Rolling Latency ($N=25$): **5.84s** (passing runs averaged **3.39s**; failing runs averaged **4.25s** in concurrent interleaved testing; earlier queued runs took **9.02s**).
-  - Average Cost: **$0.00165 USD**.
-  - Failure Profile: Fails boundary calendar clamping (Jan 31 + 1 month raising `ValueError: day is out of range for month` instead of clamping to Feb 28).
-
-**Measured Finding**: Neither model has an unconditional speed win across all cloud conditions, but `openai/gpt-oss-120b` delivers vastly superior reliability (100% vs 28%) and faster rolling latency (4.60s vs 5.84s). The 20B model's primary advantage is its lower fixed operating fee ($0.22 vs $0.30).
+#### Deadline-Driven Decision Matrix (Speed Basis: Last 10 Interleaved Runs)
+Weights: $W_{\text{speed}} = 0.80 \lambda_t$, $W_{\text{price}} = 0.80 (1 - \lambda_t)$, $W_{\text{rep}} = 0.20$ (Normalized $\sum W = 1.0$).
+- **Tight Deadline ($6.0\text{s}, \lambda_t = 1.0$)**:
+  - `code-worker-01` (120B): $S_{\text{speed}} = \frac{6.0 - 4.92}{6.0 - 0.6} = 0.2000$. Composite: $0.80(0.2000) + 0.20(0.9615) = \mathbf{0.3523}$.
+  - `code-worker-02` (20B): $S_{\text{speed}} = \frac{6.0 - 4.08}{6.0 - 0.6} = 0.3556$. Composite: $0.80(0.3556) + 0.20(0.3214) = \mathbf{0.3488}$.
+  - **Outcome**: **`code-worker-01` (120B) WINS**. Although 20B is 0.84s faster, its 72% failure rate drags its reputation to 0.3214, allowing 120B's reliability to dominate.
+- **Loose Deadline ($30.0\text{s}, \lambda_t = 0.0$)**:
+  - `code-worker-01` (120B): $S_{\text{price}} = \frac{0.50 - 0.30}{0.50 - 0.15} = 0.5714$. Composite: $0.80(0.5714) + 0.20(0.9615) = \mathbf{0.6494}$.
+  - `code-worker-02` (20B): $S_{\text{price}} = \frac{0.50 - 0.22}{0.50 - 0.15} = 0.8000$. Composite: $0.80(0.8000) + 0.20(0.3214) = \mathbf{0.7043}$.
+  - **Outcome**: **`code-worker-02` (20B) WINS**. When deadline pressure is zero, price weight dominates ($0.80$), allowing 20B's cheaper $0.22 bid to win the initial contract.
+- **End-to-End Adversarial Demo**: With scripted rogue fixture participating, rogue bids **$0.18** and wins the initial contract. Rogue fails hidden tests $\to$ $0.00 paid $\to$ dynamic reallocation to **`code-worker-01` (120B)** which passes all 5 tests and receives the live PayPal Sandbox payout.
 
 ### OCR Worker Bid Formula (Priced Per Compute Second)
 OCR workers price their machine labor upfront **per compute second** based on expected runtime rather than post-execution measured costs:
@@ -208,3 +197,81 @@ The following architectural capabilities are explicitly out of scope for the cur
 - **Batch compute across distributed nodes**: ProcureAgent currently runs single tasks sequentially against registered local and API-driven worker agents; distributed parallel map-reduce scheduling across external worker clusters is not implemented.
 - **Human-in-the-loop data labeling**: All acceptance criteria are strictly programmatic, deterministic, or LLM-evaluated. No manual annotation queues, worker labeling portals, or human review interfaces are implemented.
 - **Location-restricted / Geo-fenced data collection**: Worker nodes operate without residential proxy pools, IP rotation networks, or geographical egress constraints.
+
+---
+
+## 9. Polaris UI Provenance & Design System Attribution
+
+The frontend command centre dashboard (`dashboard/index.html`) adapts the visual aesthetic and component architecture of the Polaris design system (from `emsearch-polaris/frontend`):
+- **Obsidian Palette & Depth Tokens**: Dark space background (`#0B0E14`), surface card elevated containers (`#121824`), and dark slate border rules (`#1E293B`).
+- **Floating Dock Navigation Sidebar**: 28px rounded floating sidebar (`rounded-[28px]`, `w-16` expandable to `w-64` on hover) with glowing status indicators and icon pills.
+- **Unified Header & Dynamic Island**: 14-height top bar with `⌘K` command shortcut, live status indicators, and central Dynamic Island pill that expands to broadcast live procurement states (`IDLE`, `AUCTION`, `DELIVERY`, `VERIFYING`, `SETTLED`).
+- **Master / Detail Workspace**: Rounded top-left operations container (`rounded-tl-[32px]`), 9-stage capability pipeline strip, dual SVG budget gauge ($S + R \le B$), and collapsible right-hand telemetry dossier panel (`Trace`, `Integrity`, `Settlement`).
+- **ProcureAgent Engine Differentiation**: All underlying autonomous capability procurement protocols, capability broker matching, Bayesian reputation updating, sandboxed Python code execution, Tesseract OCR verification, PayPal Sandbox API integrations, and SHA-256 cryptographic hash chaining are entirely native to ProcureAgent.
+
+---
+
+## 10. Judge Quickstart & Deployment Guide
+
+ProcureAgent is designed for zero-friction evaluation by hackathon judges.
+
+### Quickstart: 3 Commands from Fresh Clone
+```bash
+# 1. Clone the repository
+git clone https://github.com/Aarav7162/ProcureAgent.git
+cd ProcureAgent
+
+# 2. Install dependencies into your environment
+pip install -r requirements.txt
+
+# 3. Copy example environment and start
+copy .env.example .env
+python start.py
+```
+`python start.py` automatically boots all 7 microservices in parallel and opens `http://127.0.0.1:8000/` in your default browser.
+
+### Replay Mode (Zero API Keys Required)
+Judges do NOT need API keys to evaluate the system:
+1. In the top bar, switch the toggle from **Live Mode** to **Replay Mode**.
+2. Click **Play (▶)** or step through events using **Next (▶)**.
+3. Observe the authentic 15-event recorded run (`bounty_1793358223`):
+   - Rogue worker underbids at **$0.18**.
+   - Treasury pre-flight reservation locks **$0.18**.
+   - Sandboxed hidden unit tests catch the leap-year defect.
+   - Payout is blocked (**$0.00 paid**), reservation is released.
+   - Dynamic reallocation to `code-worker-01` (120B) passes all 5 hidden tests.
+   - Real PayPal Sandbox batch `YMRTQZU3GUNMA` is settled to `PAYOUT_SUCCESS`.
+   - Append-only ledger commits with SHA-256 hash chaining.
+
+### Live Mode Setup (Real Inference & Real PayPal Settlement)
+To execute live runs with live Groq inference and real PayPal Sandbox payouts:
+
+#### 1. Free Groq API Key Setup
+1. Sign up for a free account at [console.groq.com](https://console.groq.com).
+2. Create an API Key in the dashboard.
+3. In `.env`, set:
+   ```env
+   GROQ_API_KEY=gsk_your_groq_api_key_here
+   ```
+
+#### 2. Free PayPal Developer Sandbox App Setup
+1. Log in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/applications/sandbox).
+2. Under **REST API apps**, click **Create App**:
+   - App Type: **Merchant / Platform**
+   - Sandbox Business Account: Select the default generated business account.
+3. In your newly created app, copy your credentials into `.env`:
+   ```env
+   PAYPAL_CLIENT_ID=your_sandbox_client_id
+   PAYPAL_CLIENT_SECRET=your_sandbox_client_secret
+   PAYPAL_BUYER_EMAIL=your_business_sandbox_email@business.example.com
+   PAYOUT_MODE=live
+   ```
+4. Under **Testing Tools** $\to$ **Sandbox Accounts**, note the personal accounts used for worker recipients (or keep the default preconfigured `sb-bef9t53614820@personal.example.com`).
+
+#### 3. Tesseract OCR Engine Setup (Cross-Platform Automatic Detection)
+ProcureAgent dynamically resolves Tesseract on system paths with zero hardcoded user paths:
+- **Windows**: Install via `winget install UB-Mannheim.TesseractOCR` or the official installer. Automatically detected at `%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe` or `C:\Program Files\Tesseract-OCR\tesseract.exe`.
+- **macOS**: `brew install tesseract`. Automatically detected on PATH (`/opt/homebrew/bin/tesseract` or `/usr/local/bin/tesseract`).
+- **Linux (Ubuntu/Debian)**: `sudo apt-get install -y tesseract-ocr`. Automatically detected on PATH (`/usr/bin/tesseract`).
+- *(Optional)*: Set `TESSERACT_PATH=/custom/path/to/tesseract` in `.env` if installed in a non-standard location.
+
