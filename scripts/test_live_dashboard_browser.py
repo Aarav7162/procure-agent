@@ -160,13 +160,13 @@ def run_browser_tests():
             time.sleep(0.5)
 
             # Click Next 4 times
-            page.click("button:has-text('Next ▶')")
+            page.click("#btn-replay-next")
             time.sleep(0.3)
-            page.click("button:has-text('Next ▶')")
+            page.click("#btn-replay-next")
             time.sleep(0.3)
-            page.click("button:has-text('Next ▶')")
+            page.click("#btn-replay-next")
             time.sleep(0.3)
-            page.click("button:has-text('Next ▶')")
+            page.click("#btn-replay-next")
             time.sleep(0.5)
 
             step_label = page.locator("#replay-step-label").inner_text()

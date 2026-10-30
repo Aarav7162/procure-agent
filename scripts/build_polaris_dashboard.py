@@ -1,0 +1,2778 @@
+# scripts/build_polaris_dashboard.py
+"""
+Generates the pixel-perfect Polaris Command Centre dashboard with:
+  1. Liquid glass styling + ambient beams & reactive glowing orb background (Polaris AppShell/LoginPage)
+  2. Digital interactive map of the agent marketplace (nodes, edges, animated packet flows)
+  3. 100% functional interactive buttons (sidebar, presets, controls, search, replay, filters, ledger proof)
+"""
+import os
+
+HTML_CONTENT = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProcureAgent // Polaris Command Centre</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235e6ad2' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20'/><path d='M2 12h20'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --color-base-950: #000000;
+      --color-base-900: #121214;
+      --color-base-800: #1c1c1e;
+      --color-base-700: #2c2c2e;
+      --theme-bg: #000000;
+      --theme-surface: rgba(18, 18, 20, 0.75);
+      --theme-surface-subtle: rgba(28, 28, 30, 0.65);
+      --theme-border: rgba(255, 255, 255, 0.08);
+      --theme-border-strong: rgba(255, 255, 255, 0.16);
+      --theme-text: #f4f4f5;
+      --theme-text-muted: #a1a1aa;
+      --primary-brand: #5e6ad2;
+      --primary-glow: rgba(94, 106, 210, 0.4);
+      --accent-blue: #32ade6;
+      --hazard-critical: #ff453a;
+      --hazard-high: #ff9f0a;
+      --hazard-moderate: #ffd60a;
+      --success-color: #10b981;
+      --paypal-blue: #0070ba;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--theme-bg);
+      color: var(--theme-text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      position: relative;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       POLARIS LIQUID GLASS & AMBIENT BEAMS BACKGROUND
+       Exact port of Polaris AppShell.tsx & LoginPage.tsx
+       ═══════════════════════════════════════════════════ */
+
+    /* Ambient globe - Reactive Liquid Core */
+    .ambient-globe {
+      position: fixed;
+      width: 65vw;
+      height: 65vw;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(79, 70, 229, 0.8) 0%, rgba(14, 165, 233, 0.4) 40%, transparent 70%);
+      top: var(--orb-y, 50%);
+      left: var(--orb-x, 30%);
+      transform: translate(-50%, -50%) scale(var(--orb-scale, 1));
+      filter: blur(var(--orb-blur, 130px)) hue-rotate(var(--orb-hue, 0deg));
+      opacity: var(--orb-opacity, 0.5);
+      transition: all 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient Beams Layer - 3D Light Planes Simulation */
+    .ambient-beams-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      filter: blur(32px);
+      opacity: 0.65;
+    }
+
+    .beam {
+      position: absolute;
+      border-radius: 9999px;
+      mix-blend-mode: screen;
+      opacity: 0;
+      animation: beamDrift linear infinite;
+      transform-origin: 50% 100%;
+    }
+
+    @keyframes beamDrift {
+      0%   { opacity: 0; transform: translateY(105vh) rotate(var(--beam-rot, 0deg)) scaleX(0.9); }
+      12%  { opacity: var(--beam-peak, 0.25); }
+      50%  { opacity: var(--beam-peak, 0.25); transform: translateY(-10vh) rotate(var(--beam-rot, 0deg)) scaleX(1.05); }
+      88%  { opacity: var(--beam-peak, 0.25); }
+      100% { opacity: 0; transform: translateY(-105vh) rotate(var(--beam-rot, 0deg)) scaleX(0.9); }
+    }
+
+    /* Secondary atmospheric light leaks */
+    .ambient-leak-tr {
+      position: fixed;
+      top: -15%;
+      right: -10%;
+      width: 45vw;
+      height: 45vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(94, 106, 210, 0.25) 0%, transparent 70%);
+      filter: blur(100px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .ambient-leak-bl {
+      position: fixed;
+      bottom: -15%;
+      left: 10%;
+      width: 35vw;
+      height: 35vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+      filter: blur(120px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       POLARIS DYNAMIC ISLAND (Header Center)
+       ═══════════════════════════════════════════════════ */
+    .dynamic-island {
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 9999px;
+      background: rgba(12, 14, 20, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(30px) saturate(180%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #fff;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .dynamic-island:hover {
+      border-color: rgba(94, 106, 210, 0.5);
+      box-shadow: 0 10px 35px rgba(94, 106, 210, 0.25);
+    }
+
+    .island-orb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #38bdf8, #5e6ad2);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
+      animation: pulse-island 2.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-island {
+      0%, 100% { transform: scale(0.92); opacity: 0.85; filter: hue-rotate(0deg); }
+      50%      { transform: scale(1.12); opacity: 1.0; filter: hue-rotate(30deg); }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       POLARIS FLOATING DOCK SIDEBAR
+       ═══════════════════════════════════════════════════ */
+    .floating-sidebar {
+      position: fixed;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 50;
+      height: 620px;
+      max-height: calc(100vh - 28px);
+      width: 58px;
+      border-radius: 28px;
+      background: rgba(14, 16, 24, 0.75);
+      backdrop-filter: blur(40px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+
+    .floating-sidebar:hover {
+      width: 240px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(94, 106, 210, 0.2);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      padding: 0 14px 12px 14px;
+      border-bottom: 1px solid var(--theme-border);
+      width: 100%;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .brand-icon-box {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: rgba(94, 106, 210, 0.15);
+      border: 1px solid rgba(94, 106, 210, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #818cf8;
+      box-shadow: 0 0 14px rgba(94, 106, 210, 0.3);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .floating-sidebar:hover .brand-text {
+      opacity: 1;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-subtitle {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: #818cf8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px 8px;
+      width: 100%;
+      overflow-y: auto;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      height: 38px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      padding: 0 10px;
+      gap: 12px;
+      width: 100%;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-item.active {
+      background: rgba(94, 106, 210, 0.18);
+      color: #fff;
+      border-color: rgba(94, 106, 210, 0.35);
+      box-shadow: 0 2px 10px rgba(94, 106, 210, 0.25);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: inherit;
+    }
+
+    .nav-label {
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .floating-sidebar:hover .nav-label {
+      opacity: 1;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--theme-border);
+      margin: 4px 6px;
+      width: calc(100% - 12px);
+    }
+
+    .sidebar-footer {
+      padding: 10px 8px 0 8px;
+      border-top: 1px solid var(--theme-border);
+      width: 100%;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--theme-border);
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #5e6ad2 0%, #1e1b4b 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .floating-sidebar:hover .user-info {
+      opacity: 1;
+    }
+
+    .user-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .user-role {
+      font-size: 9px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--theme-text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       APP SHELL & TOP BAR
+       ═══════════════════════════════════════════════════ */
+    .app-shell {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      z-index: 10;
+    }
+
+    .content-area {
+      height: 100%;
+      width: 100%;
+      padding-left: 80px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      height: 54px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--theme-border);
+      background: rgba(10, 12, 18, 0.7);
+      backdrop-filter: blur(25px);
+      padding: 0 20px;
+      z-index: 40;
+    }
+
+    .search-box {
+      width: 320px;
+      height: 34px;
+      border-radius: 9999px;
+      border: 1px solid var(--theme-border);
+      background: rgba(22, 24, 32, 0.6);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      color: var(--theme-text-muted);
+      font-size: 12px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--primary-brand);
+      box-shadow: 0 0 12px rgba(94, 106, 210, 0.3);
+      color: #fff;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 12px;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .search-box input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .top-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 50;
+    }
+
+    .mode-switch-group {
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--theme-border);
+      border-radius: 9999px;
+      padding: 2px;
+    }
+
+    .mode-btn {
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+      background: transparent;
+      border: none;
+      color: var(--theme-text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .mode-btn:hover {
+      color: #fff;
+    }
+
+    .mode-btn.active {
+      background: rgba(94, 106, 210, 0.25);
+      border: 1px solid rgba(94, 106, 210, 0.4);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(94, 106, 210, 0.3);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(22, 24, 32, 0.6);
+      border: 1px solid var(--theme-border);
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--theme-text-muted);
+    }
+
+    .dot-ping {
+      position: relative;
+      width: 8px;
+      height: 8px;
+      display: inline-block;
+    }
+
+    .dot-ping::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: #10b981;
+      opacity: 0.75;
+      animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+
+    .dot-ping::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: #10b981;
+    }
+
+    @keyframes ping {
+      75%, 100% { transform: scale(2.2); opacity: 0; }
+    }
+
+    /* ═══════════════════════════════════════════════════
+       MAIN VIEWPORT — ROUNDED TL [32px] OVERLAYING MAP
+       ═══════════════════════════════════════════════════ */
+    .main-viewport {
+      flex: 1;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      border-top-left-radius: 32px;
+      background: #000000;
+      border-left: 1px solid var(--theme-border);
+      border-top: 1px solid var(--theme-border);
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.8);
+    }
+
+    /* DIGITAL MAP CANVAS — Background topology */
+    #marketplace-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: auto;
+    }
+
+    /* Tactical Map Grid HUD Elements */
+    .map-grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .map-coordinate-badge {
+      position: absolute;
+      top: 14px;
+      left: 410px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: rgba(94, 106, 210, 0.8);
+      background: rgba(14, 16, 24, 0.7);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(94, 106, 210, 0.25);
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(10px);
+    }
+
+    .map-controls-group {
+      position: absolute;
+      bottom: 20px;
+      left: 410px;
+      display: flex;
+      gap: 6px;
+      z-index: 20;
+    }
+
+    .map-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      background: rgba(14, 16, 24, 0.75);
+      border: 1px solid var(--theme-border);
+      color: var(--theme-text-muted);
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      backdrop-filter: blur(15px);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .map-btn:hover {
+      background: rgba(94, 106, 210, 0.2);
+      color: #fff;
+      border-color: rgba(94, 106, 210, 0.4);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FLOATING GLASS PANELS (Polaris Command Centre Layout)
+       ═══════════════════════════════════════════════════ */
+    .floating-panels-container {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      padding: 16px;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .floating-panels-container > * {
+      pointer-events: auto;
+    }
+
+    .glass-card {
+      background: rgba(14, 16, 24, 0.78);
+      backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* 1. LEFT OPERATIONS SIDEBAR (w: 370px) */
+    .operations-sidebar {
+      width: 370px;
+      flex-shrink: 0;
+      padding: 18px;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .section-title {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--theme-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--theme-border);
+      color: var(--theme-text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+    }
+
+    .chip.active {
+      background: rgba(94, 106, 210, 0.2);
+      border-color: rgba(94, 106, 210, 0.5);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(94, 106, 210, 0.3);
+    }
+
+    .chip.chip-code {
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+    }
+    .chip.chip-code.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: #fff;
+    }
+
+    .chip.chip-impossible {
+      border-color: rgba(244, 63, 94, 0.3);
+      color: #f43f5e;
+    }
+    .chip.chip-impossible.active {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fff;
+    }
+
+    .chip.chip-attack {
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+    .chip.chip-attack.active {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fff;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--theme-text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .task-textarea {
+      width: 100%;
+      height: 70px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--theme-border);
+      border-radius: 12px;
+      padding: 10px;
+      color: #fff;
+      font-size: 12px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .task-textarea:focus {
+      border-color: var(--primary-brand);
+      box-shadow: 0 0 12px rgba(94, 106, 210, 0.3);
+    }
+
+    .task-number-input {
+      width: 100%;
+      height: 32px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--theme-border);
+      border-radius: 8px;
+      padding: 0 10px;
+      color: #fff;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+    }
+
+    .task-number-input:focus {
+      border-color: var(--primary-brand);
+    }
+
+    .range-slider {
+      width: 100%;
+      accent-color: var(--primary-brand);
+      cursor: pointer;
+    }
+
+    .lambda-pill {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--theme-border);
+      color: var(--theme-text-muted);
+    }
+
+    .btn {
+      width: 100%;
+      height: 38px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-primary {
+      background: #5e6ad2;
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(94, 106, 210, 0.4);
+    }
+
+    .btn-primary:hover {
+      background: #4954a8;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(94, 106, 210, 0.5);
+    }
+
+    .btn-attack {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #f43f5e;
+    }
+
+    .btn-attack:hover {
+      background: rgba(244, 63, 94, 0.2);
+    }
+
+    .btn-occupy {
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .btn-occupy:hover {
+      background: rgba(251, 191, 36, 0.2);
+    }
+
+    /* REPLAY BAR */
+    .replay-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--theme-border);
+      font-size: 11px;
+    }
+
+    .replay-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--theme-border);
+      border-radius: 6px;
+      color: #fff;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.15s ease;
+    }
+
+    .replay-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* 2. CENTRE WORKSPACE (Scrollable or Overlay Panels) */
+    .centre-workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* TREASURY INVARIANT CARD */
+    .treasury-card {
+      padding: 18px 22px;
+      background: rgba(14, 16, 24, 0.85);
+      backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .gauge-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .gauge-amount-hero {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--success-color);
+      letter-spacing: -0.02em;
+      font-feature-settings: "tnum";
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .gauge-subtext {
+      font-size: 10px;
+      color: var(--theme-text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.08em;
+    }
+
+    .gauge-bar-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      position: relative;
+      overflow: hidden;
+      margin: 12px 0 10px 0;
+    }
+
+    .gauge-bar-spent {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: #f43f5e;
+      transition: width 0.4s ease;
+    }
+
+    .gauge-bar-reserved {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: #fbbf24;
+      transition: width 0.4s ease;
+    }
+
+    .gauge-legend-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--theme-text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .legend-val {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* PIPELINE STEP TRACKER */
+    .pipeline-strip {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 16px;
+      background: rgba(14, 16, 24, 0.8);
+      backdrop-filter: blur(30px);
+      border: 1px solid var(--theme-border);
+      overflow-x: auto;
+    }
+
+    .p-step {
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--theme-border);
+      color: var(--theme-text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .p-step.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+
+    .p-step.completed {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10b981;
+    }
+
+    .p-step.blocked {
+      background: rgba(244, 63, 94, 0.18);
+      border-color: rgba(244, 63, 94, 0.5);
+      color: #f43f5e;
+    }
+
+    /* TABLES & MATRIX */
+    .matrix-card {
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(14, 16, 24, 0.85);
+      backdrop-filter: blur(35px);
+      border: 1px solid var(--theme-border);
+    }
+
+    .table-custom {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      text-align: left;
+    }
+
+    .table-custom th {
+      padding: 8px 10px;
+      color: var(--theme-text-muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--theme-border);
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .table-custom td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--theme-text);
+      font-feature-settings: "tnum";
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-warning {
+      background: rgba(251, 191, 36, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .badge-error {
+      background: rgba(244, 63, 94, 0.15);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .badge-accent {
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    /* PAYPAL CARD */
+    .paypal-hero-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(0, 48, 135, 0.2) 0%, rgba(0, 121, 193, 0.08) 100%);
+      border: 1px solid rgba(0, 121, 193, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .paypal-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 3. RIGHT DOSSIER (LIVE EVENT STREAM) */
+    .dossier-panel {
+      width: 390px;
+      flex-shrink: 0;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--theme-border);
+      padding-bottom: 8px;
+    }
+
+    .filter-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      background: transparent;
+      border: none;
+      color: var(--theme-text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn:hover {
+      color: #fff;
+    }
+
+    .filter-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    .event-stream-container {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .event-card {
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--theme-border);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .event-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .event-card.ev-PAYMENT_BLOCKED {
+      border-left: 3px solid #f43f5e;
+      background: rgba(244, 63, 94, 0.07);
+    }
+
+    .event-card.ev-PAYOUT_SENT {
+      border-left: 3px solid #10b981;
+      background: rgba(16, 185, 129, 0.07);
+    }
+
+    .event-card.ev-NO_CAPABLE_WORKERS {
+      border-left: 3px solid #f43f5e;
+    }
+
+    .event-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--theme-text-muted);
+    }
+
+    .event-type-badge {
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    /* IN-UI TOAST BANNER */
+    .toast-banner {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(18, 20, 28, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(94, 106, 210, 0.3);
+      backdrop-filter: blur(25px);
+      padding: 12px 20px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: #fff;
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .toast-banner.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 99px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body>
+  <!-- ═══════════════════════════════════════════════════
+       POLARIS AMBIENT BACKGROUND: BEAMS + LIQUID GLOBE
+       ═══════════════════════════════════════════════════ -->
+  <div class="ambient-globe" id="ambient-globe"
+    style="--orb-x:30%; --orb-y:55%; --orb-scale:1; --orb-blur:130px; --orb-hue:0deg; --orb-opacity:0.48;">
+  </div>
+
+  <div class="ambient-beams-layer" aria-hidden="true">
+    <div class="beam" style="left:3%;  width:20px; height:200vh; background:#fff; --beam-rot:-3deg;   --beam-peak:0.24; animation-duration:14s; animation-delay:0s;"></div>
+    <div class="beam" style="left:11%; width:14px; height:200vh; background:#e0e7ff; --beam-rot:1.5deg; --beam-peak:0.18; animation-duration:11s; animation-delay:2.3s;"></div>
+    <div class="beam" style="left:20%; width:24px; height:200vh; background:#fff; --beam-rot:-1.5deg; --beam-peak:0.28; animation-duration:17s; animation-delay:0.8s;"></div>
+    <div class="beam" style="left:29%; width:12px; height:200vh; background:#c7d2fe; --beam-rot:2.5deg;  --beam-peak:0.16; animation-duration:13s; animation-delay:4.1s;"></div>
+    <div class="beam" style="left:37%; width:18px; height:200vh; background:#fff; --beam-rot:-0.5deg; --beam-peak:0.22; animation-duration:15s; animation-delay:1.5s;"></div>
+    <div class="beam" style="left:46%; width:30px; height:200vh; background:#fff; --beam-rot:1.8deg;  --beam-peak:0.32; animation-duration:19s; animation-delay:3.2s;"></div>
+    <div class="beam" style="left:55%; width:16px; height:200vh; background:#ddd6fe; --beam-rot:-2deg;   --beam-peak:0.18; animation-duration:12s; animation-delay:5.7s;"></div>
+    <div class="beam" style="left:64%; width:22px; height:200vh; background:#fff; --beam-rot:0.8deg;  --beam-peak:0.26; animation-duration:16s; animation-delay:0.4s;"></div>
+    <div class="beam" style="left:73%; width:12px; height:200vh; background:#e0e7ff; --beam-rot:-3deg;   --beam-peak:0.15; animation-duration:10s; animation-delay:6.9s;"></div>
+    <div class="beam" style="left:81%; width:26px; height:200vh; background:#fff; --beam-rot:2deg;    --beam-peak:0.25; animation-duration:18s; animation-delay:2.1s;"></div>
+    <div class="beam" style="left:90%; width:18px; height:200vh; background:#c7d2fe; --beam-rot:-1.2deg; --beam-peak:0.20; animation-duration:14s; animation-delay:7.3s;"></div>
+    <div class="beam" style="left:96%; width:14px; height:200vh; background:#fff; --beam-rot:2.5deg;  --beam-peak:0.17; animation-duration:11s; animation-delay:1.0s;"></div>
+  </div>
+
+  <div class="ambient-leak-tr" aria-hidden="true"></div>
+  <div class="ambient-leak-bl" aria-hidden="true"></div>
+
+  <!-- In-UI Toast Notification Banner -->
+  <div class="toast-banner" id="toast-banner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <span id="toast-msg">Operation completed</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       APP SHELL
+       ═══════════════════════════════════════════════════ -->
+  <div class="app-shell">
+    <!-- Floating Dock Sidebar -->
+    <aside class="floating-sidebar" id="sidebar">
+      <div class="sidebar-brand" onclick="toggleSidebarView('command')">
+        <div class="brand-icon-box">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">ProcureAgent</span>
+          <span class="brand-subtitle">Autonomous Treasury</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active" id="nav-command" title="Command Centre" onclick="selectNav('command')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
+          </svg>
+          <span class="nav-label">Command Centre</span>
+        </div>
+
+        <div class="nav-item" id="nav-treasury" title="Treasury & Invariants" onclick="selectNav('treasury')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span class="nav-label">Treasury Guard</span>
+        </div>
+
+        <div class="nav-item" id="nav-marketplace" title="Capability Marketplace" onclick="selectNav('marketplace')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/>
+          </svg>
+          <span class="nav-label">Bidding Matrix</span>
+        </div>
+
+        <div class="nav-item" id="nav-verification" title="Verification Pipeline" onclick="selectNav('verification')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+          <span class="nav-label">Verification Engine</span>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="nav-item" id="nav-paypal" title="PayPal Settlements" onclick="selectNav('paypal')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+          <span class="nav-label">PayPal Live</span>
+        </div>
+
+        <div class="nav-item" id="nav-ledger" title="Audit & Ledger" onclick="selectNav('ledger')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span class="nav-label">Tamper Ledger</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-pill" onclick="showToast('Operator Identity: Aarav Sharma (Administrator)')">
+          <div class="user-avatar">AA</div>
+          <div class="user-info">
+            <span class="user-name">Aarav Sharma</span>
+            <span class="user-role">ADMINISTRATOR</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="content-area">
+      <!-- TopBar -->
+      <header class="top-bar">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/>
+            </svg>
+            <input type="text" id="top-search-input" placeholder="Search bounties, workers, settlements..." oninput="handleTopSearch(this.value)">
+            <kbd style="font-size: 10px; font-family: 'JetBrains Mono', monospace; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--theme-border);">⌘K</kbd>
+          </div>
+
+          <div class="mode-switch-group">
+            <button id="btn-mode-live" class="mode-btn active" onclick="switchMode('live')">Live Stream</button>
+            <button id="btn-mode-replay" class="mode-btn" onclick="switchMode('replay')">Replay Demo</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Island -->
+        <div class="dynamic-island" id="dynamic-island" onclick="focusDynamicIsland()">
+          <div class="island-orb"></div>
+          <span id="island-text">ProcureAgent · Invariant $1.00 Cold-Start OK</span>
+          <span class="badge badge-success" id="island-status">LIVE SENTINEL</span>
+        </div>
+
+        <div class="top-tools">
+          <div class="status-pill hidden lg:flex">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+            <span>Aarav's Workspace</span>
+            <span class="badge" style="background: rgba(255,255,255,0.06); border: 1px solid var(--theme-border);">ADMIN</span>
+          </div>
+
+          <div class="status-pill" style="border-color: rgba(94, 106, 210, 0.3); color: #818cf8;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
+            <span>Polaris Sentinel · Active</span>
+          </div>
+
+          <div class="status-pill">
+            <span id="conn-dot" class="dot-ping"></span>
+            <span id="conn-text">WS Connected</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Viewport (rounded-tl-[32px]) -->
+      <main class="main-viewport">
+        <!-- ═══════════════════════════════════════════════════
+             DIGITAL MAP OF THE MARKETPLACE (CANVAS)
+             Replaces static satellite map with digital topology
+             ═══════════════════════════════════════════════════ -->
+        <canvas id="marketplace-canvas"></canvas>
+
+        <div class="map-grid-overlay">
+          <div class="map-coordinate-badge">
+            <span style="color: #38bdf8;">SEC-TOPOLOGY //</span> AUTONOMOUS AGENT MARKETPLACE & SETTLEMENT RAIL
+          </div>
+          <div class="map-controls-group">
+            <button class="map-btn" onclick="centerMarketplaceMap()">⌖ Center Map</button>
+            <button class="map-btn" onclick="triggerTestPacket()">⚡ Pulse Data Cable</button>
+            <button class="map-btn" onclick="toggleMapHUD()">👁 Toggle HUD Panels</button>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             FLOATING GLASS PANELS (Overlaid on Digital Map)
+             ═══════════════════════════════════════════════════ -->
+        <div class="floating-panels-container" id="panels-overlay">
+          <!-- 1. LEFT OPERATIONS SIDEBAR -->
+          <section class="glass-card operations-sidebar" id="panel-operations">
+            <div class="section-title">
+              <span>● Task Orchestration</span>
+              <span id="run-status-badge" class="badge badge-accent" style="margin-left: auto;">IDLE</span>
+            </div>
+
+            <!-- Task Preset Chips -->
+            <div class="chip-container">
+              <span class="chip chip-code active" id="chip-code" onclick="setPreset('code')">Code Bounty</span>
+              <span class="chip chip-impossible" id="chip-impossible" onclick="setPreset('impossible')">Impossible Task</span>
+              <span class="chip chip-attack" id="chip-adversarial" onclick="setPreset('adversarial')">Rogue Attack [Fixture]</span>
+              <span class="chip" id="chip-ocr" onclick="setPreset('ocr')">OCR Benchmark</span>
+              <span class="chip" id="chip-sensor" onclick="setPreset('sensor')">Host Sensor</span>
+            </div>
+
+            <!-- Task Description -->
+            <div class="input-group">
+              <label class="input-label" for="task-desc">Task Directive / Issue</label>
+              <textarea id="task-desc" class="task-textarea">Fix month-end rollover ValueError in calculate_next_billing_date in billing.py</textarea>
+            </div>
+
+            <!-- Budget & Deadline -->
+            <div class="input-group">
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1;">
+                  <label class="input-label" for="task-budget">Max Budget ($)</label>
+                  <input type="number" id="task-budget" class="task-number-input" value="0.50" step="0.10" min="0.10" max="15.00">
+                </div>
+                <div style="flex: 1;">
+                  <label class="input-label">Deadline: <span id="deadline-val" style="color: #fff;">12.0s</span></label>
+                  <input type="range" id="task-deadline" class="range-slider" min="6" max="30" value="12" oninput="updateDeadlineUI(this.value)">
+                </div>
+              </div>
+            </div>
+
+            <!-- Lambda Weights Badges -->
+            <div style="display: flex; gap: 4px; justify-content: space-between;">
+              <div class="lambda-pill">&lambda;<sub>t</sub>: <b id="lambda-val" style="color: #fff;">0.75</b></div>
+              <div class="lambda-pill">W<sub>spd</sub>: <b id="wspeed-val" style="color: #38bdf8;">0.60</b></div>
+              <div class="lambda-pill">W<sub>prc</sub>: <b id="wprice-val" style="color: #10b981;">0.20</b></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <button id="btn-submit" class="btn btn-primary" onclick="submitTask()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Procure Capability</span>
+            </button>
+
+            <button id="btn-attack" class="btn btn-attack" onclick="triggerRogueAttack()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              <span>Simulate Rogue Attack [Fixture]</span>
+            </button>
+
+            <button id="btn-occupy" class="btn btn-occupy" onclick="triggerOccupyHost()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+              <span>Occupy Host Slot (Bottleneck)</span>
+            </button>
+
+            <!-- Replay Controls Bar (Shown in Replay Mode) -->
+            <div id="replay-bar" class="replay-bar" style="display: none;">
+              <button id="btn-replay-play" class="replay-btn" onclick="replayTogglePlay()">▶ Play</button>
+              <button id="btn-replay-prev" class="replay-btn" onclick="replayPrev()">◀ Prev</button>
+              <button id="btn-replay-next" class="replay-btn" onclick="replayNext()">Next ▶</button>
+              <span id="replay-step-label" style="font-family: 'JetBrains Mono', monospace; font-size: 10px;">Step 0 / 15</span>
+            </div>
+
+            <!-- Pipeline Status Text -->
+            <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid var(--theme-border); display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--theme-text-muted);">PIPELINE:</span>
+              <span id="pipeline-status-text" class="badge badge-accent">READY</span>
+            </div>
+          </section>
+
+          <!-- 2. CENTRE WORKSPACE (HUD Cards Over Map) -->
+          <section class="centre-workspace" id="panel-centre">
+            <!-- Treasury Invariant Card -->
+            <div class="treasury-card" id="card-treasury">
+              <div class="gauge-top">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span class="section-title">Autonomous Treasury Guard</span>
+                  <span style="font-size: 11px; color: var(--theme-text-muted);">Strict Invariant: Reserved + Settled &le; $1.00 Cold-Start Cap</span>
+                </div>
+                <div style="text-align: right;">
+                  <span id="metric-avail-big" class="gauge-amount-hero">$15.00</span>
+                  <div class="gauge-subtext">LIQUID AVAILABLE</div>
+                </div>
+              </div>
+
+              <div class="gauge-bar-track">
+                <div id="bar-spent" class="gauge-bar-spent"></div>
+                <div id="bar-reserved" class="gauge-bar-reserved"></div>
+              </div>
+
+              <div class="gauge-legend-row">
+                <div>Settled: <span id="metric-spent" class="legend-val">$0.00</span></div>
+                <div>Escrow Locked: <span id="metric-reserved" class="legend-val">$0.00</span></div>
+                <div>Hard Cap: <span id="metric-max" class="legend-val">$15.00</span></div>
+              </div>
+            </div>
+
+            <!-- Pipeline Step Tracker -->
+            <div class="pipeline-strip" id="card-pipeline">
+              <div id="step-jrp" class="p-step">1. JRP Emitted</div>
+              <div id="step-bids" class="p-step">2. Multi-Bid</div>
+              <div id="step-escrow" class="p-step">3. Escrow Lock</div>
+              <div id="step-delivery" class="p-step">4. Delivery</div>
+              <div id="step-verify1" class="p-step">5. Integrity</div>
+              <div id="step-verify2" class="p-step">6. Acceptance</div>
+              <div id="step-block" class="p-step">7. Rogue Block</div>
+              <div id="step-realloc" class="p-step">8. Reallocate</div>
+              <div id="step-payout" class="p-step">9. PayPal Paid</div>
+            </div>
+
+            <!-- Multi-Bid Capability Matrix -->
+            <div class="matrix-card" id="card-matrix">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span class="section-title">● Capability Marketplace & Scoring Matrix</span>
+                <span style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--theme-text-muted);">Normalized Composite S<sub>i</sub></span>
+              </div>
+              <table class="table-custom">
+                <thead>
+                  <tr>
+                    <th>Worker Candidate</th>
+                    <th>Bid Price</th>
+                    <th>Latency</th>
+                    <th>Reputation</th>
+                    <th>Composite Score</th>
+                    <th>Decision</th>
+                  </tr>
+                </thead>
+                <tbody id="bids-body">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--theme-text-muted); padding: 18px;">
+                      Awaiting capability bids from registered workers...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Grid: PayPal Card & Bayesian Reputation -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;" id="card-settlement-rep">
+              <!-- PayPal Settlement Card -->
+              <div class="paypal-hero-card" id="card-paypal">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="section-title" style="color: #38bdf8;">PayPal Sandbox Payout</span>
+                  <span id="paypal-status-pill" class="badge badge-success">IDLE</span>
+                </div>
+                <div>
+                  <span style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--theme-text-muted);">BATCH ID</span>
+                  <div id="paypal-batch-id" class="paypal-val" style="font-size: 13px;">—</div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <div>
+                    <span style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--theme-text-muted);">DISBURSED</span>
+                    <div id="paypal-amount" class="paypal-val">—</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <span style="font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--theme-text-muted);">RECIPIENT</span>
+                    <div id="paypal-recipient" style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: #fff;">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Reputation Meter Table -->
+              <div class="matrix-card" id="card-reputation">
+                <div class="section-title" style="margin-bottom: 8px;">
+                  <span>● Bayesian Reputation</span>
+                </div>
+                <table class="table-custom">
+                  <thead>
+                    <tr>
+                      <th>Worker</th>
+                      <th>Beta Params</th>
+                      <th>Score</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rep-body">
+                    <tr><td colspan="3" style="text-align: center; color: var(--theme-text-muted);">Loading Bayesian distribution...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Cryptographic SHA-256 Ledger -->
+            <div class="matrix-card" id="card-ledger">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="section-title">Cryptographic SHA-256 Ledger</span>
+                <button onclick="verifyLedgerChain()" style="padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid var(--theme-border); color: #fff; font-size: 10px; cursor: pointer;">Verify Proof</button>
+              </div>
+              <table class="table-custom">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Worker</th>
+                    <th>Amount</th>
+                    <th>Hash Digest</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-body">
+                  <tr><td colspan="5" style="text-align: center; color: var(--theme-text-muted);">Genesis block intact.</td></tr>
+                </tbody>
+              </table>
+              <div id="verify-badge" style="margin-top: 8px; font-size: 11px;"></div>
+            </div>
+          </section>
+
+          <!-- 3. RIGHT DOSSIER (LIVE EVENT STREAM) -->
+          <aside class="glass-card dossier-panel" id="panel-dossier">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="section-title">Live Telemetry Feed</span>
+              <button onclick="clearFeed()" style="background: none; border: none; color: var(--theme-text-muted); font-size: 10px; cursor: pointer;">Clear</button>
+            </div>
+
+            <div class="filter-tabs">
+              <button class="filter-btn active" onclick="filterEvents('ALL')">ALL</button>
+              <button class="filter-btn" onclick="filterEvents('VERIFY')">VERIFY</button>
+              <button class="filter-btn" onclick="filterEvents('PAYPAL')">PAYPAL</button>
+              <button class="filter-btn" onclick="filterEvents('BUDGET')">BUDGET</button>
+            </div>
+
+            <div class="event-stream-container" id="event-feed">
+              <!-- Event cards dynamically inserted here -->
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       JAVASCRIPT: LOGIC + MARKETPLACE MAP ENGINE
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    // RECORDED RUN (OFFLINE ZERO-API-KEY FALLBACK)
+    // ─────────────────────────────────────────────────────────────
+    let RECORDED_RUN = {
+      "title": "Autonomous Code Bounty Procurement & Settlement",
+      "description": "Simulated CI failure triggers autonomous procurement. Rogue worker underbids and is blocked by sandboxed hidden tests ($0.00 paid). Dynamic reallocation to honest worker (code-worker-01) settles via real PayPal Sandbox API.",
+      "metadata": {
+            "cycle_id": "bounty_1793358223",
+            "target_repo": "demo_repos/billing_engine",
+            "payout_mode": "live",
+            "paypal_batch_id": "YMRTQZU3GUNMA",
+            "recipient": "sb-bef9t53614820@personal.example.com",
+            "amount_usd": 0.3,
+            "paypal_status": "PAYOUT_SUCCESS",
+            "honesty_guarantee": "All adversarial outputs are SCRIPTED ADVERSARIAL FIXTURES; all payouts and Tesseract/LLM inferences are 100% REAL.",
+            "recorded_date": "2026-10-30",
+            "recorded_from_live_run": true,
+            "run_type": "adversarial_rogue_rejection"
+      },
+      "events": [
+            {
+                  "step": 1,
+                  "event": "TASK_RECEIVED",
+                  "timestamp": "2026-10-30T11:03:43.999429+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription in billing.py",
+                  "max_budget_usd": 0.5
+            },
+            {
+                  "step": 2,
+                  "event": "BOTTLENECK_CHECK",
+                  "timestamp": "2026-10-30T11:03:43.999429+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "bottlenecked": true,
+                  "reason": "Host 1-slot execution queue occupied by priority billing workload. Procuring external capability.",
+                  "executor_status": {
+                        "busy": true,
+                        "queue_depth": 1
+                  }
+            },
+            {
+                  "step": 3,
+                  "event": "JRP_EMITTED",
+                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "jrp": {
+                        "jrp_id": "bounty_755d0bdcfd86",
+                        "task_type": "code_bounty",
+                        "task_description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
+                        "max_bid_usd": 0.5,
+                        "required_capabilities": ["code_generation", "python_debugging"],
+                        "status": "OPEN_FOR_BIDS"
+                  }
+            },
+            {
+                  "step": 4,
+                  "event": "BIDS_RECEIVED",
+                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "bids": [
+                        {
+                              "worker_id": "rogue-worker-01",
+                              "model": "scripted_adversary_fixture",
+                              "bid_usd": 0.18,
+                              "estimated_seconds": 1,
+                              "reputation_score": 0.667,
+                              "composite_score": 0.8842,
+                              "status": "BID",
+                              "is_fixture": true,
+                              "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
+                        },
+                        {
+                              "worker_id": "code-worker-02",
+                              "model": "openai/gpt-oss-20b",
+                              "bid_usd": 0.22,
+                              "estimated_seconds": 9.0,
+                              "measured_latency": 9.02,
+                              "reputation_score": 0.385,
+                              "composite_score": 0.4117,
+                              "status": "BID"
+                        },
+                        {
+                              "worker_id": "code-worker-01",
+                              "model": "openai/gpt-oss-120b",
+                              "bid_usd": 0.3,
+                              "estimated_seconds": 4.5,
+                              "measured_latency": 4.67,
+                              "reputation_score": 0.923,
+                              "composite_score": 0.3931,
+                              "status": "BID"
+                        }
+                  ]
+            },
+            {
+                  "step": 5,
+                  "event": "BID_AWARDED",
+                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "winner": {
+                        "worker_id": "rogue-worker-01",
+                        "bid_usd": 0.18,
+                        "is_fixture": true,
+                        "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
+                  },
+                  "award_reason": "Underbid below market rate ($0.18 vs $0.22/$0.30)"
+            },
+            {
+                  "step": 6,
+                  "event": "BUDGET_RESERVED",
+                  "timestamp": "2026-10-30T11:03:45.921163+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "reservation_id": "res_f6103ab85fca",
+                  "worker_id": "rogue-worker-01",
+                  "amount_usd": 0.18,
+                  "budget_state": {
+                        "max_usd": 15.0,
+                        "spent_usd": 0.0,
+                        "reserved_usd": 0.18,
+                        "available_usd": 14.82
+                  }
+            },
+            {
+                  "step": 7,
+                  "event": "DELIVERY_RECEIVED",
+                  "timestamp": "2026-10-30T11:03:46.072276+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "worker_id": "rogue-worker-01",
+                  "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
+                  "delivery": {
+                        "sha256_hash": "7cf554730ebfbe7f48ebd7fc2396f8d8361d7a99fe8f3beec723dda73422bac1"
+                  }
+            },
+            {
+                  "step": 8,
+                  "event": "TWO_STAGE_VERIFICATION",
+                  "timestamp": "2026-10-30T11:03:48.652278+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "worker_id": "rogue-worker-01",
+                  "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
+                  "acceptance": {
+                        "verified": false,
+                        "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month"
+                  },
+                  "overall_verdict": "REJECTED"
+            },
+            {
+                  "step": 9,
+                  "event": "PAYMENT_BLOCKED",
+                  "timestamp": "2026-10-30T11:03:48.892785+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "worker_id": "rogue-worker-01",
+                  "amount_paid_usd": 0.0,
+                  "reservation_released": "res_f6103ab85fca",
+                  "message": "Payment BLOCKED. Escrow reservation released. Rogue worker paid $0.00."
+            },
+            {
+                  "step": 10,
+                  "event": "TASK_REALLOCATING",
+                  "timestamp": "2026-10-30T11:03:48.892785+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "failed_worker": "rogue-worker-01",
+                  "reallocated_to": "code-worker-01",
+                  "model": "openai/gpt-oss-120b",
+                  "bid_usd": 0.3,
+                  "message": "Autonomous reallocation triggered. Awarding to code-worker-01 at $0.30."
+            },
+            {
+                  "step": 11,
+                  "event": "BUDGET_RESERVED",
+                  "timestamp": "2026-10-30T11:03:48.926732+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "reservation_id": "res_dcfca00b34f6",
+                  "worker_id": "code-worker-01",
+                  "amount_usd": 0.3,
+                  "budget_state": { "max_usd": 15.0, "spent_usd": 0.0, "reserved_usd": 0.3, "available_usd": 14.7 }
+            },
+            {
+                  "step": 12,
+                  "event": "DELIVERY_RECEIVED",
+                  "timestamp": "2026-10-30T11:03:51.915497+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "worker_id": "code-worker-01",
+                  "model": "openai/gpt-oss-120b",
+                  "delivery": { "sha256_hash": "42463941acf1fa2e8db78497cf79296ea158e6dee8de8b20ed22313f6208490f" }
+            },
+            {
+                  "step": 13,
+                  "event": "TWO_STAGE_VERIFICATION",
+                  "timestamp": "2026-10-30T11:03:54.964977+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "worker_id": "code-worker-01",
+                  "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
+                  "acceptance": {
+                        "verified": true,
+                        "details": "5/5 hidden unit tests passed in sandbox"
+                  },
+                  "overall_verdict": "VERIFIED_APPROVED"
+            },
+            {
+                  "step": 14,
+                  "event": "PAYOUT_SENT",
+                  "timestamp": "2026-10-30T11:04:23.899238+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "payout": {
+                        "payout_batch_id": "YMRTQZU3GUNMA",
+                        "worker_id": "code-worker-01",
+                        "worker_email": "sb-bef9t53614820@personal.example.com",
+                        "amount_usd": 0.3,
+                        "final_status": "PAYOUT_SUCCESS"
+                  },
+                  "budget": { "max_usd": 15.0, "spent_usd": 0.3, "reserved_usd": 0.0, "available_usd": 14.7 }
+            },
+            {
+                  "step": 15,
+                  "event": "LEDGER_COMMITTED",
+                  "timestamp": "2026-10-30T11:04:23.928128+00:00",
+                  "cycle_id": "bounty_1793358223",
+                  "entry_index": 1,
+                  "worker_id": "code-worker-01",
+                  "amount_usd": 0.3,
+                  "chain_hash": "d59831645b53ee5f109bdf15a9ed303874fdd6d090a73af108ba194202fe652e"
+            }
+      ]
+    };
+
+    let CURRENT_MODE = "live";
+    let REPLAY_STEP = 0;
+    let REPLAY_INTERVAL = null;
+    let REPLAY_SPEED = 1000;
+    let WS = null;
+    let EVENT_FILTER = "ALL";
+    let FORCE_PROCURE = true;
+
+    // ─────────────────────────────────────────────────────────────
+    // INITIALIZATION
+    // ─────────────────────────────────────────────────────────────
+    window.addEventListener("DOMContentLoaded", async () => {
+      updateDeadlineUI(12);
+      fetchLedger();
+      fetchReputation();
+      fetchBudget();
+      connectWebSocket();
+      initMarketplaceCanvas();
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // TOAST BANNER NOTIFICATION
+    // ─────────────────────────────────────────────────────────────
+    function showToast(msg) {
+      const banner = document.getElementById("toast-banner");
+      const text = document.getElementById("toast-msg");
+      text.innerText = msg;
+      banner.classList.add("show");
+      setTimeout(() => banner.classList.remove("show"), 3200);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // AMBIENT GLOBE REACTIVE PULSE
+    // ─────────────────────────────────────────────────────────────
+    function orbPulse(state) {
+      const el = document.getElementById("ambient-globe");
+      if (!el) return;
+      const states = {
+        idle:    { x: '30%', y: '55%', scale: '1',    blur: '130px', hue: '0deg',   opacity: '0.48' },
+        active:  { x: '50%', y: '45%', scale: '1.12', blur: '100px', hue: '35deg',  opacity: '0.65' },
+        blocked: { x: '35%', y: '50%', scale: '0.9',  blur: '80px',  hue: '330deg', opacity: '0.75' },
+        paid:    { x: '45%', y: '40%', scale: '1.18', blur: '75px',  hue: '155deg', opacity: '0.70' },
+      };
+      const s = states[state] || states.idle;
+      el.style.setProperty('--orb-x', s.x);
+      el.style.setProperty('--orb-y', s.y);
+      el.style.setProperty('--orb-scale', s.scale);
+      el.style.setProperty('--orb-blur', s.blur);
+      el.style.setProperty('--orb-hue', s.hue);
+      el.style.setProperty('--orb-opacity', s.opacity);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // MODE SWITCHING (Live vs Replay)
+    // ─────────────────────────────────────────────────────────────
+    function switchMode(mode) {
+      CURRENT_MODE = mode;
+      document.getElementById("btn-mode-live").classList.toggle("active", mode === "live");
+      document.getElementById("btn-mode-replay").classList.toggle("active", mode === "replay");
+
+      const replayBar = document.getElementById("replay-bar");
+      if (mode === "replay") {
+        replayBar.style.display = "flex";
+        document.getElementById("conn-dot").style.background = "#94a3b8";
+        document.getElementById("conn-text").innerText = "Replay Active";
+        showToast("Replay Demo activated. Use controller to step through audit trace.");
+        replayReset();
+      } else {
+        replayBar.style.display = "none";
+        if (REPLAY_INTERVAL) clearInterval(REPLAY_INTERVAL);
+        showToast("Live Stream mode connected to real backend cluster.");
+        connectWebSocket();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // WEBSOCKET HANDLING
+    // ─────────────────────────────────────────────────────────────
+    function connectWebSocket() {
+      if (WS) {
+        try { WS.close(); } catch (e) {}
+      }
+
+      const host = window.location.host || "127.0.0.1:8000";
+      const wsUrl = `ws://${host}/ws`;
+
+      try {
+        WS = new WebSocket(wsUrl);
+        WS.onopen = () => {
+          document.getElementById("conn-dot").className = "dot-ping";
+          document.getElementById("conn-text").innerText = "WS Connected";
+        };
+        WS.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleIncomingEvent(data);
+          } catch (e) {
+            console.error("WS Parse Error", e);
+          }
+        };
+        WS.onclose = () => {
+          document.getElementById("conn-text").innerText = "Reconnecting...";
+          if (CURRENT_MODE === "live") {
+            setTimeout(connectWebSocket, 2000);
+          }
+        };
+      } catch (err) {
+        console.error("WebSocket init failed", err);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // EVENT HANDLING & PIPELINE UPDATES
+    // ─────────────────────────────────────────────────────────────
+    function handleIncomingEvent(ev) {
+      renderEventCard(ev);
+
+      const eventType = ev.event || ev.type || "INFO";
+      updatePipelineUI(eventType);
+
+      if (window._marketplaceSpawnEvent) {
+        window._marketplaceSpawnEvent(ev);
+      }
+
+      if (eventType === "TASK_RECEIVED" || eventType === "JRP_EMITTED") {
+        orbPulse('active');
+      } else if (eventType === "PAYMENT_BLOCKED") {
+        orbPulse('blocked');
+      } else if (eventType === "PAYOUT_SENT") {
+        orbPulse('paid');
+        setTimeout(() => orbPulse('idle'), 6000);
+      }
+
+      if (eventType === "BUDGET_RESERVED" || eventType === "BUDGET_UPDATED" || eventType === "PAYMENT_BLOCKED" || eventType === "PAYOUT_SENT") {
+        fetchBudget();
+      }
+      if (eventType === "PAYOUT_SENT" || eventType === "LEDGER_COMMITTED") {
+        fetchLedger();
+        renderPayPalCard(ev);
+      }
+      if (eventType === "REPUTATION_UPDATED" || eventType === "SETTLEMENT_RECONCILED") {
+        fetchReputation();
+      }
+      if (eventType === "BIDS_RECEIVED" && ev.bids) {
+        renderBidsTable(ev.bids, ev.winner);
+      }
+    }
+
+    function renderEventCard(ev) {
+      const feed = document.getElementById("event-feed");
+      const type = ev.event || ev.type || "EVENT";
+      const ts = ev.ts ? (ev.ts.includes("T") ? ev.ts.split("T")[1].substring(0, 8) : ev.ts) : new Date().toLocaleTimeString();
+
+      const card = document.createElement("div");
+      card.className = `event-card ev-${type}`;
+      card.setAttribute("data-event-type", type);
+
+      let html = "";
+      if (type === "TASK_RECEIVED") {
+        html = `<div><b>Task Directive Dispatched:</b> "${escapeHtml(ev.description)}"</div>
+                <div style="font-size: 11px; color: var(--theme-text-muted); margin-top: 3px;">Max Cap: <b>$${Number(ev.max_budget_usd || 0).toFixed(2)}</b></div>`;
+      } else if (type === "BOTTLENECK_CHECK") {
+        html = `<div>Host Execution Sensor: <b>${ev.bottlenecked ? 'BOTTLENECK DETECTED (Queue Saturated)' : 'HOST IDLE (Local Execution)'}</b></div>
+                <div style="font-size: 11px; color: var(--theme-text-muted);">${escapeHtml(ev.reason || '')}</div>`;
+      } else if (type === "JRP_EMITTED") {
+        const j = ev.jrp || {};
+        html = `<div>Constructed JRP: <code>${(j.jrp_id || '').substring(0, 16)}...</code></div>
+                <div style="font-size: 11px; color: var(--theme-text-muted);">Required: [${(j.required_capabilities || []).join(', ')}] | Max Bid: <b>$${j.max_bid_usd}</b></div>`;
+      } else if (type === "BIDS_RECEIVED") {
+        const bids = ev.bids || [];
+        html = `<div>Received <b>${bids.length} Candidate Bids</b> via Capability Manifests</div>
+                <div style="font-size: 11px; color: var(--theme-text-muted); margin-top: 2px;">` +
+                bids.map(b => `${escapeHtml(b.worker_id)}: $${Number(b.bid_usd).toFixed(2)} (${b.estimated_seconds || b.measured_latency || 0}s)`).join(" • ") +
+                `</div>`;
+      } else if (type === "BID_AWARDED") {
+        const w = ev.winner || {};
+        html = `<div>Awarded to <b>${escapeHtml(w.worker_id)}</b> for <b>$${Number(w.bid_usd).toFixed(2)}</b></div>
+                <div style="font-size: 11px; color: var(--theme-text-muted);">${escapeHtml(ev.award_reason || 'Selected based on composite scoring')}</div>`;
+      } else if (type === "BUDGET_RESERVED") {
+        html = `<div>Atomic Escrow Lock: <b>$${Number(ev.amount_usd || 0).toFixed(2)}</b> for <b>${escapeHtml(ev.worker_id)}</b></div>
+                <div style="font-size: 10px; color: var(--theme-text-muted); font-family: 'JetBrains Mono', monospace;">Res ID: ${escapeHtml(ev.reservation_id || '')} (SQLite BEGIN IMMEDIATE)</div>`;
+      } else if (type === "DELIVERY_RECEIVED") {
+        const d = ev.delivery || {};
+        html = `<div>Delivery received from <b>${escapeHtml(ev.worker_id)}</b></div>
+                <div style="font-size: 10px; color: var(--theme-text-muted); font-family: 'JetBrains Mono', monospace;">SHA-256: ${(d.sha256_hash || '').substring(0, 24)}...</div>`;
+      } else if (type === "TWO_STAGE_VERIFICATION") {
+        const intOk = ev.integrity ? ev.integrity.match : (ev.report?.integrity?.match || ev.verified);
+        const accOk = ev.acceptance ? ev.acceptance.verified : ev.verified;
+        html = `<div>Two-Stage Verification Report: <b>${escapeHtml(ev.worker_id)}</b></div>
+                <div style="display: flex; gap: 6px; margin: 5px 0;">
+                  <span class="badge ${intOk ? 'badge-success' : 'badge-error'}">Stage 1 Integrity: ${intOk ? 'PASSED' : 'FAILED'}</span>
+                  <span class="badge ${accOk ? 'badge-success' : 'badge-error'}">Stage 2 Acceptance: ${accOk ? 'PASSED' : 'FAILED'}</span>
+                </div>
+                <div style="font-size: 11px; color: var(--theme-text-muted);">${escapeHtml(ev.acceptance?.reason || ev.acceptance?.details || ev.report?.message || '')}</div>`;
+      } else if (type === "PAYMENT_BLOCKED") {
+        html = `<div style="color: var(--hazard-critical); font-weight: 700;">PAYMENT WITHHELD — ZERO TRUST ENFORCED</div>
+                <div>${escapeHtml(ev.message || ev.reason || 'Payment withheld')}</div>
+                <div style="font-size: 10px; color: #fca5a5; margin-top: 3px;">Escrow reservation released: $0.00 transferred. Bayesian penalty applied.</div>`;
+      } else if (type === "TASK_REALLOCATING") {
+        html = `<div style="color: #fbbf24; font-weight: 700;">AUTONOMOUS REALLOCATION</div>
+                <div>${escapeHtml(ev.message || ev.reason || '')}</div>`;
+      } else if (type === "PAYOUT_SENT") {
+        const p = ev.payout || ev;
+        html = `<div style="color: #38bdf8; font-weight: 700;">PAYPAL SANDBOX SETTLEMENT COMPLETE</div>
+                <div>Batch ID: <code>${escapeHtml(p.payout_batch_id || p.paypal_batch_id || '')}</code></div>
+                <div>Recipient: <b>${escapeHtml(p.worker_email || p.recipient || '')}</b> | Amount: <b>$${Number(p.amount_usd || 0).toFixed(2)}</b></div>
+                <div style="font-size: 10px; color: var(--success-color); margin-top: 2px;">Status: <b>${escapeHtml(p.final_status || p.status || 'PAYOUT_SUCCESS')}</b> (Reconciled via PayPal REST API)</div>`;
+      } else if (type === "NO_CAPABLE_WORKERS") {
+        html = `<div style="color: var(--hazard-critical); font-weight: 700;">CAPABILITY MARKETPLACE EXHAUSTED</div>
+                <div>${escapeHtml(ev.message || '')}</div>
+                <div style="font-size: 11px; color: var(--success-color); margin-top: 3px;">Proof of $0.00 spent: No funds locked or released.</div>`;
+      } else if (type === "LEDGER_COMMITTED") {
+        html = `<div>SHA-256 Ledger Block Committed: <code>${(ev.tx_hash || ev.chain_hash || '').substring(0, 16)}...</code></div>
+                <div style="font-size: 10px; color: var(--success-color);">Cryptographic chain intact</div>`;
+      } else {
+        html = `<div>${escapeHtml(JSON.stringify(ev))}</div>`;
+      }
+
+      card.innerHTML = `
+        <div class="event-top">
+          <span class="event-type-badge">${escapeHtml(type)}</span>
+          <span>${ts}</span>
+        </div>
+        <div>${html}</div>
+      `;
+
+      feed.prepend(card);
+      applyFilterToCard(card);
+    }
+
+    function updatePipelineUI(eventType) {
+      const statusBadge = document.getElementById("pipeline-status-text");
+      if (eventType === "JRP_EMITTED") {
+        document.getElementById("step-jrp").className = "p-step active";
+        statusBadge.innerText = "JRP SPECIFIED";
+      } else if (eventType === "BIDS_RECEIVED") {
+        document.getElementById("step-jrp").className = "p-step completed";
+        document.getElementById("step-bids").className = "p-step active";
+        statusBadge.innerText = "BIDS SCORED";
+      } else if (eventType === "BUDGET_RESERVED") {
+        document.getElementById("step-bids").className = "p-step completed";
+        document.getElementById("step-escrow").className = "p-step active";
+        statusBadge.innerText = "ESCROW LOCKED";
+      } else if (eventType === "DELIVERY_RECEIVED") {
+        document.getElementById("step-escrow").className = "p-step completed";
+        document.getElementById("step-delivery").className = "p-step active";
+        statusBadge.innerText = "PAYLOAD DELIVERED";
+      } else if (eventType === "TWO_STAGE_VERIFICATION") {
+        document.getElementById("step-delivery").className = "p-step completed";
+        document.getElementById("step-verify1").className = "p-step completed";
+        document.getElementById("step-verify2").className = "p-step active";
+        statusBadge.innerText = "SANDBOX TESTING";
+      } else if (eventType === "PAYMENT_BLOCKED") {
+        document.getElementById("step-verify2").className = "p-step blocked";
+        document.getElementById("step-block").className = "p-step blocked";
+        statusBadge.innerText = "PAYMENT BLOCKED ($0 PAID)";
+      } else if (eventType === "TASK_REALLOCATING") {
+        document.getElementById("step-realloc").className = "p-step active";
+        statusBadge.innerText = "REALLOCATING TO HONEST CANDIDATE";
+      } else if (eventType === "PAYOUT_SENT" || eventType === "SETTLEMENT_RECONCILED") {
+        document.getElementById("step-realloc").className = "p-step completed";
+        document.getElementById("step-payout").className = "p-step completed";
+        statusBadge.innerText = "PAYPAL SETTLED";
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // REPLAY CONTROLLER
+    // ─────────────────────────────────────────────────────────────
+    function replayReset() {
+      REPLAY_STEP = 0;
+      if (REPLAY_INTERVAL) { clearInterval(REPLAY_INTERVAL); REPLAY_INTERVAL = null; }
+      document.getElementById("btn-replay-play").innerText = "▶ Play";
+      clearFeed();
+      resetPipelineSteps();
+      updateReplayStepLabel();
+    }
+
+    function resetPipelineSteps() {
+      const stepIds = ["step-jrp", "step-bids", "step-escrow", "step-delivery", "step-verify1", "step-verify2", "step-block", "step-realloc", "step-payout"];
+      stepIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.className = "p-step";
+      });
+    }
+
+    function replayTogglePlay() {
+      if (REPLAY_INTERVAL) {
+        clearInterval(REPLAY_INTERVAL);
+        REPLAY_INTERVAL = null;
+        document.getElementById("btn-replay-play").innerText = "▶ Play";
+      } else {
+        document.getElementById("btn-replay-play").innerText = "⏸ Pause";
+        REPLAY_INTERVAL = setInterval(() => {
+          if (REPLAY_STEP < RECORDED_RUN.events.length) {
+            replayNext();
+          } else {
+            clearInterval(REPLAY_INTERVAL);
+            REPLAY_INTERVAL = null;
+            document.getElementById("btn-replay-play").innerText = "▶ Play";
+          }
+        }, REPLAY_SPEED);
+      }
+    }
+
+    function replayNext() {
+      if (REPLAY_STEP < RECORDED_RUN.events.length) {
+        const ev = RECORDED_RUN.events[REPLAY_STEP];
+        REPLAY_STEP++;
+        handleIncomingEvent(ev);
+        updateReplayStepLabel();
+      }
+    }
+
+    function replayPrev() {
+      if (REPLAY_STEP > 0) {
+        REPLAY_STEP--;
+        clearFeed();
+        resetPipelineSteps();
+        for (let i = 0; i < REPLAY_STEP; i++) {
+          handleIncomingEvent(RECORDED_RUN.events[i]);
+        }
+        updateReplayStepLabel();
+      }
+    }
+
+    function updateReplayStepLabel() {
+      document.getElementById("replay-step-label").innerText = `Step ${REPLAY_STEP} / ${RECORDED_RUN.events.length}`;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // API CALLS & DATA RETRIEVAL
+    // ─────────────────────────────────────────────────────────────
+    function updateDeadlineUI(val) {
+      const d = parseFloat(val);
+      document.getElementById("deadline-val").innerText = d.toFixed(1) + "s";
+
+      const lambda = Math.max(0.0, Math.min(1.0, (30.0 - d) / 24.0));
+      const wSpeed = (0.80 * lambda).toFixed(2);
+      const wPrice = (0.80 * (1.0 - lambda)).toFixed(2);
+
+      document.getElementById("lambda-val").innerText = lambda.toFixed(2);
+      document.getElementById("wspeed-val").innerText = wSpeed;
+      document.getElementById("wprice-val").innerText = wPrice;
+    }
+
+    function renderBidsTable(bids, winner) {
+      const tbody = document.getElementById("bids-body");
+      if (!bids || bids.length === 0) return;
+
+      tbody.innerHTML = bids.map(b => {
+        const isWin = winner && winner.worker_id === b.worker_id;
+        const latency = b.measured_latency || b.estimated_seconds || 4.5;
+        const score = b.composite_score ? b.composite_score.toFixed(4) : "—";
+        const isFixture = b.is_fixture || b.worker_id.includes("rogue");
+
+        return `
+          <tr>
+            <td>
+              ${isFixture ? `<span style="color: #fbbf24;">${escapeHtml(b.worker_id)}</span><br><span style="font-size: 9px; color: var(--theme-text-muted);">[SCRIPTED FIXTURE]</span>` : `${escapeHtml(b.worker_id)}<br><span style="font-size: 9px; color: var(--theme-text-muted);">${escapeHtml(b.model || "")}</span>`}
+            </td>
+            <td>$${parseFloat(b.bid_usd || 0).toFixed(2)}</td>
+            <td>${parseFloat(latency).toFixed(1)}s</td>
+            <td>${parseFloat(b.reputation_score || 0.5).toFixed(3)}</td>
+            <td><b>${score}</b></td>
+            <td>
+              ${isWin ? `<span class="badge ${isFixture ? 'badge-error' : 'badge-success'}">${isFixture ? 'Awarded (Low)' : 'Awarded'}</span>` : `<span style="color: var(--theme-text-muted);">Outbid</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderPayPalCard(ev) {
+      const p = ev.payout || ev;
+      if (p.paypal_batch_id || p.payout_batch_id) {
+        document.getElementById("paypal-batch-id").innerText = p.paypal_batch_id || p.payout_batch_id;
+      }
+      if (p.amount_usd !== undefined) {
+        document.getElementById("paypal-amount").innerText = "$" + parseFloat(p.amount_usd).toFixed(2) + " USD";
+      }
+      if (p.recipient || p.worker_email) {
+        document.getElementById("paypal-recipient").innerText = p.recipient || p.worker_email;
+      }
+      if (p.status || p.final_status) {
+        const pill = document.getElementById("paypal-status-pill");
+        const st = p.final_status || p.status;
+        pill.innerText = st;
+        pill.className = st.includes("SUCCESS") ? "badge badge-success" : "badge badge-warning";
+      }
+    }
+
+    function updateBudgetUI(data) {
+      if (!data) return;
+      const spent = parseFloat(data.spent_usd || 0);
+      const reserved = parseFloat(data.reserved_usd || 0);
+      const maxBudget = parseFloat(data.max_budget_usd || data.max_usd || 15.0);
+      const avail = Math.max(0, maxBudget - spent - reserved);
+
+      document.getElementById("metric-spent").innerText = `$${spent.toFixed(2)}`;
+      document.getElementById("metric-reserved").innerText = `$${reserved.toFixed(2)}`;
+      document.getElementById("metric-max").innerText = `$${maxBudget.toFixed(2)}`;
+      document.getElementById("metric-avail-big").innerText = `$${avail.toFixed(2)}`;
+
+      const pctSpent = (spent / maxBudget) * 100;
+      const pctReserved = (reserved / maxBudget) * 100;
+      document.getElementById("bar-spent").style.width = `${pctSpent}%`;
+      document.getElementById("bar-reserved").style.width = `${pctReserved}%`;
+    }
+
+    async function fetchLedger() {
+      try {
+        const res = await fetch("/ledger");
+        if (!res.ok) return;
+        const txs = await res.json();
+        const tbody = document.getElementById("ledger-body");
+        if (!txs || txs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="color: var(--theme-text-muted); text-align: center;">Genesis block active. No external payments yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = txs.map((tx, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${escapeHtml(tx.worker_id || "treasury")}</td>
+            <td style="color: var(--success-color);">$${parseFloat(tx.amount_usd || 0).toFixed(2)}</td>
+            <td title="${tx.tx_hash}">${(tx.tx_hash || tx.chain_hash || "").substring(0, 10)}...</td>
+            <td><span class="badge badge-success">COMMITTED</span></td>
+          </tr>
+        `).join("");
+      } catch (err) {}
+    }
+
+    async function verifyLedgerChain() {
+      const badge = document.getElementById("verify-badge");
+      badge.innerHTML = `<span style="color: #38bdf8;">Verifying cryptographic SHA-256 links...</span>`;
+
+      try {
+        const res = await fetch("/ledger/verify");
+        const d = await res.json();
+        if (d.valid) {
+          badge.innerHTML = `<span class="badge badge-success">✓ SHA-256 Chain Intact (${d.tx_count || 1} Blocks Verified)</span>`;
+          showToast(`Ledger Proof Verified: ${d.tx_count || 1} blocks cryptographically linked.`);
+        } else {
+          badge.innerHTML = `<span class="badge badge-error">✗ Tamper Detected: Hash mismatch!</span>`;
+          showToast("Warning: Cryptographic ledger verification failed!");
+        }
+      } catch (err) {
+        badge.innerHTML = `<span class="badge badge-error">Ledger check error: ${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    async function fetchReputation() {
+      try {
+        const res = await fetch("/reputation");
+        if (!res.ok) return;
+        const reps = await res.json();
+        const tbody = document.getElementById("rep-body");
+        if (!reps || reps.length === 0) return;
+
+        tbody.innerHTML = reps.map(r => {
+          const score = parseFloat(r.reputation_score || 0.5);
+          const isFixture = r.worker_id.includes("rogue");
+          const color = isFixture ? "var(--hazard-critical)" : (score >= 0.7 ? "var(--success-color)" : "var(--theme-text)");
+
+          return `
+            <tr>
+              <td>${isFixture ? `<span style="color: #fbbf24;">${escapeHtml(r.worker_id)}</span> [FIXTURE]` : escapeHtml(r.worker_id)}</td>
+              <td>Beta(${parseFloat(r.alpha).toFixed(1)}, ${parseFloat(r.beta).toFixed(1)})</td>
+              <td><span style="color: ${color}; font-weight: 700;">${score.toFixed(3)}</span></td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {}
+    }
+
+    async function fetchBudget() {
+      try {
+        const res = await fetch("/budget");
+        if (res.ok) {
+          const data = await res.json();
+          updateBudgetUI(data);
+        }
+      } catch (err) {}
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CONTROLS & SUBMISSION ACTIONS
+    // ─────────────────────────────────────────────────────────────
+    async function submitTask() {
+      const desc = document.getElementById("task-desc").value;
+      const budget = parseFloat(document.getElementById("task-budget").value) || 0.50;
+
+      document.getElementById("run-status-badge").innerText = "SUBMITTING...";
+      showToast("Dispatching task directive to capability broker...");
+
+      try {
+        const res = await fetch("/task", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: desc,
+            max_budget_usd: budget,
+            force_procure: FORCE_PROCURE
+          })
+        });
+        const d = await res.json();
+        document.getElementById("run-status-badge").innerText = "RUNNING";
+        showToast("Capability procurement cycle initiated.");
+      } catch (err) {
+        console.error("Task submission failed", err);
+        document.getElementById("run-status-badge").innerText = "ERROR";
+        showToast("Error dispatching task: " + err.message);
+      }
+    }
+
+    async function triggerRogueAttack() {
+      setPreset('adversarial');
+      showToast("Simulating scripted rogue worker underbid attack fixture...");
+      await submitTask();
+    }
+
+    async function triggerOccupyHost() {
+      try {
+        const res = await fetch("/demo/occupy_local", { method: "POST" });
+        const d = await res.json();
+        showToast("Host 1-slot executor occupied for 6s. Authentic sensor detects queue saturation!");
+      } catch (err) {
+        showToast("Error occupying host: " + err);
+      }
+    }
+
+    function setPreset(type) {
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+      const chipEl = document.getElementById(`chip-${type}`);
+      if (chipEl) chipEl.classList.add("active");
+
+      if (type === 'code') {
+        document.getElementById("task-desc").value = "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py";
+        document.getElementById("task-budget").value = "0.50";
+        document.getElementById("task-deadline").value = 12;
+        updateDeadlineUI(12);
+        FORCE_PROCURE = true;
+        showToast("Preset Loaded: Code Bounty ($0.50 max budget, 12s deadline)");
+      } else if (type === 'ocr') {
+        document.getElementById("task-desc").value = "Transcribe document scans in data/real_scans/ with CER validation";
+        document.getElementById("task-budget").value = "1.00";
+        document.getElementById("task-deadline").value = 20;
+        updateDeadlineUI(20);
+        FORCE_PROCURE = true;
+        showToast("Preset Loaded: OCR Benchmark ($1.00 max budget, 20s deadline)");
+      } else if (type === 'sensor') {
+        document.getElementById("task-desc").value = "Calculate next billing schedule date and run system health telemetry";
+        document.getElementById("task-budget").value = "0.30";
+        document.getElementById("task-deadline").value = 15;
+        updateDeadlineUI(15);
+        FORCE_PROCURE = false;
+        showToast("Preset Loaded: Host Sensor Demo (force_procure = false). If host is occupied, triggers procurement.");
+      } else if (type === 'impossible') {
+        document.getElementById("task-desc").value = "Quantum factoring of RSA-4096 modulus using Shor's algorithm on superconductor qubit lattice";
+        document.getElementById("task-budget").value = "5.00";
+        document.getElementById("task-deadline").value = 30;
+        updateDeadlineUI(30);
+        FORCE_PROCURE = true;
+        showToast("Preset Loaded: Impossible Task (Guarantees $0.00 spent when no worker is capable)");
+      } else if (type === 'adversarial') {
+        document.getElementById("task-desc").value = "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py (Adversarial test)";
+        document.getElementById("task-budget").value = "0.50";
+        document.getElementById("task-deadline").value = 12;
+        updateDeadlineUI(12);
+        FORCE_PROCURE = true;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // SIDEBAR NAVIGATION INTERACTIVITY
+    // ─────────────────────────────────────────────────────────────
+    function selectNav(id) {
+      document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+      const el = document.getElementById(`nav-${id}`);
+      if (el) el.classList.add("active");
+
+      // Scroll relevant card into view
+      const targetCardMap = {
+        'command': 'panel-operations',
+        'treasury': 'card-treasury',
+        'marketplace': 'card-matrix',
+        'verification': 'card-pipeline',
+        'paypal': 'card-paypal',
+        'ledger': 'card-ledger'
+      };
+
+      const targetId = targetCardMap[id];
+      if (targetId) {
+        const card = document.getElementById(targetId);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.borderColor = 'rgba(94, 106, 210, 0.8)';
+          card.style.boxShadow = '0 0 25px rgba(94, 106, 210, 0.4)';
+          setTimeout(() => {
+            card.style.borderColor = '';
+            card.style.boxShadow = '';
+          }, 1500);
+        }
+      }
+    }
+
+    function toggleSidebarView(view) {
+      selectNav(view);
+    }
+
+    function focusDynamicIsland() {
+      showToast("ProcureAgent Dynamic Island · Treasury Invariant Guard actively enforcing $1.00 Cold-Start Policy.");
+      orbPulse('active');
+      setTimeout(() => orbPulse('idle'), 2000);
+    }
+
+    function handleTopSearch(query) {
+      if (!query) {
+        document.querySelectorAll(".event-card").forEach(c => c.style.display = "block");
+        return;
+      }
+      const q = query.toLowerCase();
+      document.querySelectorAll(".event-card").forEach(c => {
+        const match = c.innerText.toLowerCase().includes(q);
+        c.style.display = match ? "block" : "none";
+      });
+    }
+
+    function filterEvents(type) {
+      EVENT_FILTER = type;
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.innerText.toUpperCase() === type);
+      });
+      document.querySelectorAll(".event-card").forEach(card => {
+        applyFilterToCard(card);
+      });
+    }
+
+    function applyFilterToCard(card) {
+      if (EVENT_FILTER === "ALL") {
+        card.style.display = "block";
+        return;
+      }
+      const t = card.getAttribute("data-event-type") || "";
+      let match = false;
+      if (EVENT_FILTER === "VERIFY" && (t.includes("VERIF") || t.includes("BLOCK") || t.includes("TEST"))) match = true;
+      if (EVENT_FILTER === "PAYPAL" && (t.includes("PAY") || t.includes("LEDGER"))) match = true;
+      if (EVENT_FILTER === "BUDGET" && (t.includes("BUDGET") || t.includes("ESCROW") || t.includes("RESERV"))) match = true;
+      card.style.display = match ? "block" : "none";
+    }
+
+    function clearFeed() {
+      document.getElementById("event-feed").innerHTML = "";
+      showToast("Telemetry event feed cleared.");
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function toggleMapHUD() {
+      const overlay = document.getElementById("panels-overlay");
+      if (overlay.style.opacity === "0.15") {
+        overlay.style.opacity = "1";
+        overlay.style.pointerEvents = "auto";
+        showToast("HUD Panels Restored");
+      } else {
+        overlay.style.opacity = "0.15";
+        overlay.style.pointerEvents = "none";
+        showToast("Map Inspection Mode (HUD Dimmed)");
+      }
+    }
+
+    function triggerTestPacket() {
+      if (window._marketplaceSpawnEvent) {
+        window._marketplaceSpawnEvent({
+          event: "TASK_RECEIVED",
+          worker_id: "code-worker-01"
+        });
+        showToast("Telemetry data packet pulsed across marketplace grid.");
+      }
+    }
+
+    function centerMarketplaceMap() {
+      showToast("Marketplace Topology Centered on Orchestrator Hub");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // DIGITAL MAP OF THE MARKETPLACE — TOPOLOGY ENGINE
+    // ─────────────────────────────────────────────────────────────
+    function initMarketplaceCanvas() {
+      const canvas = document.getElementById("marketplace-canvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+
+      const NODES = [
+        { id: "orchestrator",   label: "Autonomous Orchestrator", sub: "Treasury Invariant Hub", color: "#5e6ad2", ring: "#818cf8", r: 24, isHub: true },
+        { id: "code-worker-01", label: "code-worker-01",          sub: "GPT-OSS-120B · $0.30",    color: "#10b981", ring: "#34d399", r: 16, relX: 0.28,  relY: -0.26 },
+        { id: "code-worker-02", label: "code-worker-02",          sub: "GPT-OSS-20B · $0.22",     color: "#38bdf8", ring: "#7dd3fc", r: 16, relX: 0.32,  relY: 0.24 },
+        { id: "rogue-worker-01",label: "rogue-worker-01",         sub: "[FIXTURE] · $0.18",       color: "#f43f5e", ring: "#fb7185", r: 16, relX: -0.28, relY: -0.24, isRogue: true },
+        { id: "ocr-worker-01",  label: "ocr-worker-01",           sub: "Tesseract OCR · CER<5%", color: "#fbbf24", ring: "#fcd34d", r: 15, relX: -0.30, relY: 0.22 },
+        { id: "paypal-gateway", label: "PayPal Sandbox Rail",     sub: "Disbursement Gateway",    color: "#0070ba", ring: "#38bdf8", r: 15, relX: 0.0,   relY: 0.34, isRail: true }
+      ];
+
+      const packets = [];
+      let lastW = 0, lastH = 0;
+      let nodePositions = {};
+      let radarAngle = 0;
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        computePositions();
+      }
+
+      function computePositions() {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        nodePositions = {};
+
+        NODES.forEach(n => {
+          if (n.isHub) {
+            nodePositions[n.id] = { x: cx, y: cy };
+          } else {
+            nodePositions[n.id] = {
+              x: cx + n.relX * canvas.width,
+              y: cy + n.relY * canvas.height
+            };
+          }
+        });
+      }
+
+      function spawnPacket(fromId, toId, color, speed) {
+        const from = nodePositions[fromId];
+        const to = nodePositions[toId];
+        if (!from || !to) return;
+        packets.push({
+          from, to,
+          color: color || "#5e6ad2",
+          t: 0,
+          speed: speed || (0.008 + Math.random() * 0.008)
+        });
+      }
+
+      function drawTacticalGrid(ts) {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        // Cybernetic background grid
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+
+        for (let x = 0; x < W; x += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.stroke();
+        }
+        for (let y = 0; y < H; y += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+          ctx.stroke();
+        }
+
+        const hub = nodePositions["orchestrator"];
+        if (!hub) return;
+
+        // Concentric radar circles from hub
+        radarAngle += 0.015;
+        for (let r = 80; r < Math.max(W, H) * 0.5; r += 90) {
+          ctx.beginPath();
+          ctx.arc(hub.x, hub.y, r, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(94, 106, 210, 0.06)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Radar sweep arm
+        ctx.beginPath();
+        ctx.moveTo(hub.x, hub.y);
+        ctx.arc(hub.x, hub.y, Math.min(W, H) * 0.45, radarAngle, radarAngle + 0.35);
+        ctx.closePath();
+        const sweepGrad = ctx.createRadialGradient(hub.x, hub.y, 10, hub.x, hub.y, Math.min(W, H) * 0.45);
+        sweepGrad.addColorStop(0, "rgba(94, 106, 210, 0.12)");
+        sweepGrad.addColorStop(1, "rgba(94, 106, 210, 0)");
+        ctx.fillStyle = sweepGrad;
+        ctx.fill();
+
+        // Connective cables from hub to each peripheral node
+        NODES.forEach(n => {
+          if (n.isHub) return;
+          const pos = nodePositions[n.id];
+          if (!pos) return;
+
+          const cableGrad = ctx.createLinearGradient(hub.x, hub.y, pos.x, pos.y);
+          cableGrad.addColorStop(0, "rgba(94, 106, 210, 0.4)");
+          cableGrad.addColorStop(1, `${n.ring}66`);
+
+          ctx.beginPath();
+          ctx.moveTo(hub.x, hub.y);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.strokeStyle = cableGrad;
+          ctx.lineWidth = 1.4;
+          ctx.setLineDash([6, 8]);
+          ctx.lineDashOffset = -(ts / 28);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+
+        // Draw nodes
+        NODES.forEach((n, idx) => {
+          const pos = nodePositions[n.id];
+          if (!pos) return;
+
+          // Outer halo pulse
+          const pulse = 0.5 + 0.5 * Math.sin(ts / 600 + idx);
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, n.r + 6 + pulse * 4, 0, Math.PI * 2);
+          ctx.fillStyle = `${n.ring}18`;
+          ctx.fill();
+
+          // Node body gradient
+          const bodyGrad = ctx.createRadialGradient(pos.x - 2, pos.y - 2, 2, pos.x, pos.y, n.r);
+          bodyGrad.addColorStop(0, n.isHub ? "#818cf8" : n.ring);
+          bodyGrad.addColorStop(1, n.color);
+
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, n.r, 0, Math.PI * 2);
+          ctx.fillStyle = bodyGrad;
+          ctx.fill();
+
+          // Border
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, n.r, 0, Math.PI * 2);
+          ctx.strokeStyle = `${n.ring}dd`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Text label
+          ctx.font = `${n.isHub ? 600 : 500} ${n.isHub ? 11 : 10}px Inter, sans-serif`;
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillText(n.label, pos.x, pos.y + n.r + 6);
+
+          if (n.sub) {
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = `${n.ring}cc`;
+            ctx.fillText(n.sub, pos.x, pos.y + n.r + 20);
+          }
+        });
+
+        // Packets traveling along links
+        for (let i = packets.length - 1; i >= 0; i--) {
+          const p = packets[i];
+          p.t += p.speed;
+          if (p.t >= 1) {
+            packets.splice(i, 1);
+            continue;
+          }
+
+          const curX = p.from.x + (p.to.x - p.from.x) * p.t;
+          const curY = p.from.y + (p.to.y - p.from.y) * p.t;
+
+          ctx.beginPath();
+          ctx.arc(curX, curY, 4, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(curX, curY, 8, 0, Math.PI * 2);
+          ctx.fillStyle = `${p.color}44`;
+          ctx.fill();
+        }
+
+        requestAnimationFrame(drawTacticalGrid);
+      }
+
+      window.addEventListener("resize", () => {
+        resize();
+      });
+
+      // Background periodic packet pulse
+      setInterval(() => {
+        const workers = ["code-worker-01", "code-worker-02", "ocr-worker-01"];
+        const target = workers[Math.floor(Math.random() * workers.length)];
+        const wNode = NODES.find(n => n.id === target);
+        if (Math.random() > 0.5) {
+          spawnPacket("orchestrator", target, wNode?.color);
+        } else {
+          spawnPacket(target, "orchestrator", wNode?.ring);
+        }
+      }, 900);
+
+      // Event hook for live packet streaming
+      window._marketplaceSpawnEvent = function(ev) {
+        const type = ev.event || ev.type || "";
+        const workerId = ev.worker_id;
+
+        if (workerId && nodePositions[workerId]) {
+          const targetColor = type.includes("BLOCK") ? "#f43f5e" :
+                              type.includes("PAYOUT") ? "#10b981" :
+                              type.includes("RESERV") ? "#fbbf24" : "#5e6ad2";
+
+          spawnPacket("orchestrator", workerId, targetColor, 0.02);
+          setTimeout(() => spawnPacket(workerId, "orchestrator", targetColor, 0.025), 300);
+
+          if (type.includes("PAYOUT")) {
+            setTimeout(() => spawnPacket("orchestrator", "paypal-gateway", "#0070ba", 0.02), 600);
+          }
+        }
+      };
+
+      resize();
+      requestAnimationFrame(drawTacticalGrid);
+    }
+  </script>
+</body>
+</html>
+'''
+
+def main():
+    target_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard", "index.html")
+    with open(target_path, "w", encoding="utf-8") as f:
+        f.write(HTML_CONTENT)
+    print(f"[OK] Successfully built Polaris Command Centre at: {target_path}")
+    print(f"     Total bytes: {len(HTML_CONTENT)}")
+
+if __name__ == "__main__":
+    main()
+

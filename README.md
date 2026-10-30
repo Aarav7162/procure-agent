@@ -1,7 +1,7 @@
 # ProcureAgent: Autonomous AI Capability Procurement & Settlement Engine
 
 **PayPal AI Agent Hackathon Project**  
-*Agent-pays-agent capability procurement with cryptographic integrity, deterministic verification, and real PayPal Sandbox settlement.*
+*Agent-pays-agent capability procurement with tamper-evident payload verification, deterministic verification, and real PayPal Sandbox settlement.*
 
 ---
 
@@ -9,9 +9,9 @@
 
 ProcureAgent empowers autonomous AI agents to dynamically discover, procure, and settle specialized machine labor from competitive third-party worker agents. Unlike conventional agent frameworks that trust agent output implicitly, ProcureAgent operates under a **Zero-Trust Verification Architecture**:
 
-- **Real Money, Verified Delivery**: Funds are held in escrow via pre-flight budget reservations ($S + R \le B$) and released through **PayPal Payouts API** *only* after two-layer cryptographic and deterministic verification.
+- **Real Money, Verified Delivery**: Funds are managed via pre-flight internal budget reservations ($S + R \le B$) and released through **PayPal Payouts API** *only* after two-layer payload integrity and deterministic verification.
 - **Strict Realism Directive**: Everything that can be real is real (real PayPal API sandbox payouts, real Groq LLM inference, real Levenshtein OCR Character Error Rate evaluation, real sandboxed Python test execution, real live HTTP citation probing). Anything that cannot be real is visibly labeled `SIMULATED` across logs, UI, and ledger.
-- **Tamper-Evident Ledger**: Every state transition is written to an append-only SQLite ledger serialized with `BEGIN IMMEDIATE` and anchored to an external cryptographic SHA-256 hash chain (`audit/latest_chain_hash.txt`).
+- **Tamper-Evident Ledger**: Every state transition is written to an append-only SQLite ledger serialized with `BEGIN IMMEDIATE` and anchored to an external tamper-evident SHA-256 hash chain (`audit/latest_chain_hash.txt`).
 
 ---
 
@@ -143,7 +143,7 @@ Each worker operates under a distinct, isolated PayPal sandbox account. **No two
 
 | Worker ID | Name | Role | Model / Engine | PayPal Sandbox Account |
 | :--- | :--- | :--- | :--- | :--- |
-| **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | Policy & Escrow Engine | `sb-s8vke53470365@business.example.com` |
+| **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | Policy & Treasury Engine | `sb-s8vke53470365@business.example.com` |
 | **ocr-worker-01** | OCR Specialist Alpha | Primary OCR (Raw PSM 3) | Tesseract 5.5.0 | `sb-sqcdl53128062@personal.example.com` |
 | **ocr-worker-02** | OCR Specialist Beta | Second OCR (Binarized PSM 6) | Tesseract 5.5.0 + OpenCV | `sb-shusq53615721@personal.example.com` |
 | **code-worker-01** | Python Code Specialist | Code Generation & Debugging | `openai/gpt-oss-120b` | `sb-bef9t53614820@personal.example.com` |
@@ -180,7 +180,7 @@ In the Polaris-themed dashboard (`dashboard/index.html`):
 
 In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py`, `scripts/test_ocr_gate.py`, and `scripts/test_gate3_code_bounty_live.py`):
 1. **Rogue Underbids**: Bids below honest market rate and is awarded the initial contract.
-2. **Budget Reserved**: Exact bid amount reserved in escrow.
+2. **Budget Reserved**: Exact bid amount reserved in internal budget reservation.
 3. **Defect Caught**: Rogue submits flawed delivery (OCR CER exceeds 5.0% threshold or code fails hidden unit tests).
 4. **Payment Withheld & Reservation Released**: Rogue's reservation is released back to the treasury pool. Rogue receives **$\$0.00$**.
 5. **Dynamic Reallocation**: Task is dynamically reassigned to the winning honest worker.
@@ -207,7 +207,7 @@ The frontend command centre dashboard (`dashboard/index.html`) adapts the visual
 - **Floating Dock Navigation Sidebar**: 28px rounded floating sidebar (`rounded-[28px]`, `w-16` expandable to `w-64` on hover) with glowing status indicators and icon pills.
 - **Unified Header & Dynamic Island**: 14-height top bar with `⌘K` command shortcut, live status indicators, and central Dynamic Island pill that expands to broadcast live procurement states (`IDLE`, `AUCTION`, `DELIVERY`, `VERIFYING`, `SETTLED`).
 - **Master / Detail Workspace**: Rounded top-left operations container (`rounded-tl-[32px]`), 9-stage capability pipeline strip, dual SVG budget gauge ($S + R \le B$), and collapsible right-hand telemetry dossier panel (`Trace`, `Integrity`, `Settlement`).
-- **ProcureAgent Engine Differentiation**: All underlying autonomous capability procurement protocols, capability broker matching, Bayesian reputation updating, sandboxed Python code execution, Tesseract OCR verification, PayPal Sandbox API integrations, and SHA-256 cryptographic hash chaining are entirely native to ProcureAgent.
+- **ProcureAgent Engine Differentiation**: All underlying autonomous capability procurement protocols, capability broker matching, Bayesian reputation updating, sandboxed Python code execution, Tesseract OCR verification, PayPal Sandbox API integrations, and tamper-evident SHA-256 hash chaining are entirely native to ProcureAgent.
 
 ---
 
