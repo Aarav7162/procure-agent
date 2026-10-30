@@ -86,10 +86,27 @@ def levenshtein_distance(s1: str, s2: str) -> int:
     return previous_row[-1]
 
 
+def normalize_ocr_text(text: str) -> str:
+    """
+    Standard OCR text normalization rule:
+    1. Removes decorative separator lines consisting solely of repeated symbols
+       (e.g., '---', '===', '___') which OCR engines treat as graphical horizontal rules
+       rather than semantic text characters.
+    2. Collapses multi-line whitespace and column padding into single spaces.
+    """
+    import re
+    lines = [line.strip() for line in text.splitlines()]
+    filtered = [l for l in lines if not re.match(r'^[-=_*~]{3,}$', l) and l]
+    return " ".join(" ".join(filtered).split())
+
+
 def compute_cer(reference: str, hypothesis: str) -> float:
-    """Computes Character Error Rate (CER = Edit Distance / Reference Length)."""
-    ref_norm = " ".join(reference.split())
-    hyp_norm = " ".join(hypothesis.split())
+    """
+    Computes Character Error Rate (CER = Levenshtein Edit Distance / Normalized Reference Length).
+    Applies standard OCR normalization (stripping graphic separator rules and collapsing whitespace).
+    """
+    ref_norm = normalize_ocr_text(reference)
+    hyp_norm = normalize_ocr_text(hypothesis)
     if not ref_norm:
         return 0.0 if not hyp_norm else 1.0
     dist = levenshtein_distance(ref_norm, hyp_norm)
