@@ -8,3 +8,4 @@ qs = set(re.findall(r'querySelector\(["\']#([a-zA-Z0-9_\-]+)["\']\)', text))
 all_ids = sorted(list(ids | qs))
 print("Referenced IDs count:", len(all_ids))
 print("Referenced IDs:", all_ids)
+

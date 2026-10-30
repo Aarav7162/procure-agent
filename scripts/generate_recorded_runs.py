@@ -269,3 +269,4 @@ with open(os.path.join(AUDIT_DIR, "recorded_genuine_failure_reallocation.json"),
 print("[SUCCESS] Created recorded runs in demo/recorded_runs/ and audit/executions/:")
 print(f"  • recorded_rogue_run.json ({len(rogue_data['events'])} events, Batch {rogue_data['metadata']['paypal_batch_id']})")
 print(f"  • recorded_genuine_failure_reallocation.json ({len(genuine_failure_data['events'])} events, Batch {genuine_failure_data['metadata']['paypal_batch_id']})")
+
