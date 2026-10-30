@@ -68,6 +68,7 @@ async def broadcast(event_type: str, data: dict):
 
 
 @app.websocket("/ws")
+@app.websocket("/ws/events")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     _ws_clients.append(ws)

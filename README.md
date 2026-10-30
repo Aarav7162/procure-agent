@@ -57,17 +57,16 @@ Both OCR workers run **real Tesseract OCR** (`tesseract.exe`) and refuse to retu
 
 ### Task Family 2: Python Code Generation (`code-worker-01` vs `code-worker-02`)
 Two genuinely differentiated code generation workers running on different model tiers:
-- **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Operational fee $F_{\text{min}} = \$0.30$.
-- **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Operational fee $F_{\text{min}} = \$0.22$.
+- **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.30$.
+- **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.22$.
 
-#### Empirical 10-Run Benchmark (10 Live Calls Per Model)
-Measured via `scripts/benchmark_10_runs_code_workers.py` on the financial billing module (`demo_repos/billing_engine`):
+#### Empirical Rolling Benchmark ($N = 25$ Live Calls Per Model)
+ProcureAgent measures code worker performance across a rolling window of 25 live runs per model (including 10 sequential runs, 5 dynamic reallocation runs, and 10 interleaved concurrent runs executing 120B and 20B simultaneously to cancel out cloud queue load):
 | Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Real-World Tradeoff |
 | :--- | :--- | :--- | :--- |
-| **Pass Rate (5/5 Hidden Tests)** | **10 / 10 (100.0%)** | **3 / 10 (30.0%)** | 120B has **3.3x higher reliability** on intricate edge-case logic. |
-| **Failures Encountered** | **0 failures** | **7 failures** | 20B repeatedly reproduced naive month rollover without clamping. |
-| **Average Measured Latency** | **4.6655s** | **9.0201s** | 20B generated verbose reasoning loops (passing runs avg 10.67s; failing runs avg 8.31s). |
-| **Average Actual Cost per Call** | **$0.00177 USD** | **$0.00171 USD** | Minor token cost difference; operational base fee dominates. |
+| **Pass Rate (5/5 Hidden Tests)** | **25 / 25 (100.0%)** | **7 / 25 (28.0%)** | 120B has **3.6x higher reliability**. The 20B pass rate varies between runs (3/10 in initial benchmark, 2/5 in reallocation tests, 2/10 in concurrent interleaved tests). |
+| **Rolling Average Latency ($N=25$)** | **4.60s** | **5.84s** | Speed scores are computed from a rolling average across all recorded runs. In isolated low-load concurrent runs, 20B achieved 4.08s (passing runs 3.39s, failing runs 4.25s), but failed 8/10 tests. |
+| **Average Actual Cost per Call** | **$0.00185 USD** (~1,820 tokens) | **$0.00165 USD** (~2,100 tokens) | Negligible token cost variance; the fixed operating fee dominates. |
 
 - **Sandboxed Hidden Tests**: Executed in a subprocess with a 3.0s wall-clock timeout against hidden edge-case assertions. Workers never receive hidden test files in the JRP.
 
@@ -88,27 +87,27 @@ $$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \text{round}\l
 Where:
 - **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.60$/1M input, $\$0.60$/1M output; for `gpt-oss-20b`, $\$0.15$/1M input, $\$0.30$/1M output).
 - **$M_{\text{compute}}$ (Risk & Variance Multiplier)**: $1.25$ (covers token count variance, network latency, and retry overhead).
-- **$F_{\text{min}}$ (Minimum Operational Fee)**:
+- **$F_{\text{min}}$ (Fixed Operating Fee Set Per Worker)**:
   - $\$0.15$ for `llm-worker-01` (agent uptime, citation validation readiness).
   - $\$0.22$ for `code-worker-02` (fast 20B model uptime, lower compute footprint).
   - $\$0.30$ for `code-worker-01` (deep reasoning 120B model uptime, AST compilation, and test execution harness).
 
 *(Note: The $F_{\text{min}}$ floor is inherently satisfied since $C_{\text{api}} \ge 0$ and $F_{\text{min}} > 0$.)*
 
-### Empirical Model Benchmark (10 Runs Per Model)
-ProcureAgent empirically benchmarked `openai/gpt-oss-120b` and `openai/gpt-oss-20b` across exactly **10 live runs per model** on the `demo_repos/billing_engine` month-end calendar rollover test suite (5 hidden unit tests):
+### Empirical Model Benchmark ($N = 25$ Runs Per Model)
+ProcureAgent empirically benchmarked `openai/gpt-oss-120b` and `openai/gpt-oss-20b` across **25 live runs per model** on the `demo_repos/billing_engine` month-end calendar rollover test suite (5 hidden unit tests):
 - **`openai/gpt-oss-120b`**:
-  - Pass Rate: **10/10 (100.0%)** on Attempt 1.
-  - Average Latency: **4.67s**.
-  - Average Cost: **$0.00177 USD** (~1,790 tokens).
-  - Failure Profile: Zero failures.
+  - Pass Rate: **25/25 (100.0%)** on Attempt 1.
+  - Rolling Latency ($N=25$): **4.60s**.
+  - Average Cost: **$0.00185 USD** (~1,820 tokens).
+  - Failure Profile: Zero failures across all 25 live calls.
 - **`openai/gpt-oss-20b`**:
-  - Pass Rate: **3/10 (30.0%)** on Attempt 1.
-  - Average Latency: **9.02s** (passing runs averaged **10.67s** due to extensive reasoning; failing runs averaged **8.31s**).
-  - Average Cost: **$0.00171 USD**.
-  - Failure Profile: Failed 7/10 runs on edge-case calendar clamping (e.g., Jan 31 + 1 month raising `ValueError: day is out of range for month` instead of clamping to Feb 28).
+  - Pass Rate: **7/25 (28.0%)** on Attempt 1 (varies between runs: 3/10, 2/5, 2/10).
+  - Rolling Latency ($N=25$): **5.84s** (passing runs averaged **3.39s**; failing runs averaged **4.25s** in concurrent interleaved testing; earlier queued runs took **9.02s**).
+  - Average Cost: **$0.00165 USD**.
+  - Failure Profile: Fails boundary calendar clamping (Jan 31 + 1 month raising `ValueError: day is out of range for month` instead of clamping to Feb 28).
 
-**Finding**: `openai/gpt-oss-120b` is both **more accurate (100% vs 30%)** and **faster in practice (4.67s vs 9.02s)** than `20b` on intricate multi-step calendar arithmetic. The 20B model's primary advantage is a lower operational fee ($0.22 vs $0.30).
+**Measured Finding**: Neither model has an unconditional speed win across all cloud conditions, but `openai/gpt-oss-120b` delivers vastly superior reliability (100% vs 28%) and faster rolling latency (4.60s vs 5.84s). The 20B model's primary advantage is its lower fixed operating fee ($0.22 vs $0.30).
 
 ### OCR Worker Bid Formula (Priced Per Compute Second)
 OCR workers price their machine labor upfront **per compute second** based on expected runtime rather than post-execution measured costs:
@@ -179,6 +178,16 @@ The end-to-end procurement and settlement flow is initiated via a **simulated CI
 
 ### Scripted Adversarial Fixtures Disclosure
 All adversarial outputs—including the rogue worker's Python code submissions and OCR character distortions—are **scripted adversarial fixtures**. They are deliberately engineered to simulate realistic machine errors (such as missing leap-year calendar clamping or optical character scanning noise) to rigorously test the two-layer verification engine without human intervention. In all scenarios, the rogue worker is blocked and asserted to receive strictly **$0.00**.
+
+### Robust Task Parser & Deterministic Keyword Fallback
+ProcureAgent employs a multi-tier Job Request Packet (JRP) parsing pipeline in `orchestrator/jrp_builder.py`:
+1. **Tier 1 (Live LLM Semantic Parser)**: Uses `openai/gpt-oss-120b` to dynamically extract technical capability requirements and build programmatic acceptance rules from free-form natural language.
+2. **Tier 2 (Deterministic Keyword Fallback)**: If live cloud LLM completion encounters a network timeout, rate limit, or invalid JSON payload, `build_jrp()` automatically falls back to `keyword_fallback_jrp()`. This fallback deterministically maps domain keywords (`python`, `code`, `billing`, `ocr`, `scan`, `receipt`) to standardized capability manifests, ensuring 100% orchestrator resilience even under cloud degradation.
+
+### Dashboard Presets & Authentic Host Sensor Demonstration
+In the Polaris-themed dashboard (`dashboard/index.html`):
+- **Forced Procurement Presets**: Quick presets marked as `(Forced Procurement)` set `force_procure=true` in the task payload. This allows judges and operators to immediately demonstrate external marketplace bidding, verification, and PayPal settlements without manually saturating the local host.
+- **Authentic Host Bottleneck Sensor Demo**: The `Host Bottleneck Sensor` preset dispatches tasks with `force_procure=false`. When deployed, the orchestrator authentically queries the host system's live CPU, memory, and 1-slot execution queue (`orchestrator/bottleneck_sensor.py`). If the host is idle, the task executes locally with zero spend. Clicking `Occupy Host Slot` saturates the local execution slot, causing the authentic sensor to detect a bottleneck and dynamically route the task to external marketplace procurement.
 
 In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py`, `scripts/test_ocr_gate.py`, and `scripts/test_gate3_code_bounty_live.py`):
 1. **Rogue Underbids**: Bids below honest market rate and is awarded the initial contract.

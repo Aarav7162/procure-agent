@@ -47,42 +47,26 @@ def run_browser_tests():
 
     procs = []
     try:
-        # 1. Orchestrator
-        p_orch = subprocess.Popen([sys.executable, "-m", "uvicorn", "orchestrator.agent:app", "--port", "8000", "--host", "127.0.0.1"], env=env)
-        procs.append(p_orch)
+        services_to_start = [
+            ("http://127.0.0.1:8000/health", ["uvicorn", "orchestrator.agent:app", "--port", "8000", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8001/health", ["uvicorn", "broker.server:app", "--port", "8001", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8002/health", ["uvicorn", "workers.ocr_worker:app", "--port", "8002", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8003/health", ["uvicorn", "workers.code_worker:app", "--port", "8003", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8004/health", ["uvicorn", "workers.llm_worker:app", "--port", "8004", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8005/health", ["uvicorn", "workers.rogue_worker:app", "--port", "8005", "--host", "127.0.0.1"]),
+            ("http://127.0.0.1:8007/health", ["uvicorn", "workers.code_worker_20b:app", "--port", "8007", "--host", "127.0.0.1"]),
+        ]
 
-        # 2. Broker
-        p_broker = subprocess.Popen([sys.executable, "-m", "uvicorn", "broker.server:app", "--port", "8001", "--host", "127.0.0.1"], env=env)
-        procs.append(p_broker)
+        for url, cmd in services_to_start:
+            if not wait_for_service(url, timeout=0.5):
+                p = subprocess.Popen([sys.executable, "-m"] + cmd, env=env)
+                procs.append(p)
+            else:
+                print(f"  Service at {url} is already running. Reusing existing instance.")
 
-        # 3. Code Worker 120B
-        p_code = subprocess.Popen([sys.executable, "-m", "uvicorn", "workers.code_worker:app", "--port", "8003", "--host", "127.0.0.1"], env=env)
-        procs.append(p_code)
-
-        # 4. LLM Worker
-        p_llm = subprocess.Popen([sys.executable, "-m", "uvicorn", "workers.llm_worker:app", "--port", "8004", "--host", "127.0.0.1"], env=env)
-        procs.append(p_llm)
-
-        # 5. Rogue Worker
-        p_rogue = subprocess.Popen([sys.executable, "-m", "uvicorn", "workers.rogue_worker:app", "--port", "8005", "--host", "127.0.0.1"], env=env)
-        procs.append(p_rogue)
-
-        # 6. OCR Worker Alpha
-        p_ocr = subprocess.Popen([sys.executable, "-m", "uvicorn", "workers.ocr_worker:app", "--port", "8002", "--host", "127.0.0.1"], env=env)
-        procs.append(p_ocr)
-
-        # 7. Code Worker 20B
-        p_20b = subprocess.Popen([sys.executable, "-m", "uvicorn", "workers.code_worker_20b:app", "--port", "8007", "--host", "127.0.0.1"], env=env)
-        procs.append(p_20b)
-
-        print("  Waiting for microservices to report healthy...")
-        assert wait_for_service("http://127.0.0.1:8000/health"), "Orchestrator failed to start"
-        assert wait_for_service("http://127.0.0.1:8001/health"), "Broker failed to start"
-        assert wait_for_service("http://127.0.0.1:8002/health"), "OCR worker failed to start"
-        assert wait_for_service("http://127.0.0.1:8003/health"), "Code worker 120B failed to start"
-        assert wait_for_service("http://127.0.0.1:8004/health"), "LLM worker failed to start"
-        assert wait_for_service("http://127.0.0.1:8005/health"), "Rogue worker failed to start"
-        assert wait_for_service("http://127.0.0.1:8007/health"), "Code worker 20B failed to start"
+        print("  Waiting for all microservices to report healthy...")
+        for url, _ in services_to_start:
+            assert wait_for_service(url, timeout=10.0), f"Service at {url} failed to respond"
         print("  All 7 microservices healthy!")
 
         print("\n" + "=" * 70)
@@ -102,7 +86,8 @@ def run_browser_tests():
             page.goto("http://127.0.0.1:8000/", wait_until="networkidle")
             time.sleep(1.0)
 
-            # Check WS status
+            # Wait for WS Connected handshake
+            page.wait_for_selector("#conn-text:has-text('Connected')", timeout=8000)
             conn_text = page.locator("#conn-text").inner_text()
             print(f"  WebSocket status indicator: '{conn_text}'")
             assert "Connected" in conn_text, f"Expected WS Connected, got {conn_text}"

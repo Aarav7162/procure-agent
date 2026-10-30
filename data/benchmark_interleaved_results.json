@@ -1,0 +1,245 @@
+{
+  "sample_size": 25,
+  "rolling_avg_120b": 4.6,
+  "rolling_avg_20b": 5.84,
+  "interleaved_10_runs": {
+    "120b": [
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 5.9166896999959135,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001461,
+        "tokens": 1536,
+        "code_len": 2228
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 6.513080400007311,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001922,
+        "tokens": 1843,
+        "code_len": 3116
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 5.23697070000344,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.002099,
+        "tokens": 1961,
+        "code_len": 2624
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.159381000004942,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001966,
+        "tokens": 1873,
+        "code_len": 3525
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.731294900004286,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.00221,
+        "tokens": 2035,
+        "code_len": 3106
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.395206299988786,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.002033,
+        "tokens": 1917,
+        "code_len": 2865
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 5.24952770001255,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001888,
+        "tokens": 1821,
+        "code_len": 3197
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.312855600001058,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001989,
+        "tokens": 1888,
+        "code_len": 3286
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.261107299986179,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001783,
+        "tokens": 1751,
+        "code_len": 2933
+      },
+      {
+        "model": "openai/gpt-oss-120b",
+        "wall_time": 4.405683899996802,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001883,
+        "tokens": 1817,
+        "code_len": 3067
+      }
+    ],
+    "20b": [
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 4.581329399996321,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 0
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.4832977000041865,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 0
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 4.181523899998865,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 1884
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.769829500000924,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 0
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.8031186000007438,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 0
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.976058499989449,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 738
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 4.152280800000881,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 0
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.6028965000004973,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.001159,
+        "tokens": 1749,
+        "code_len": 1649
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 6.066793399993912,
+        "all_passed": false,
+        "failed_tests": [
+          "test_month_end_january_to_february",
+          "test_month_end_31_to_30",
+          "test_leap_year_rollover",
+          "test_invalid_interval_rejected",
+          "test_invalid_proration_days_rejected"
+        ],
+        "cost_usd": 0.001753,
+        "tokens": 2343,
+        "code_len": 1116
+      },
+      {
+        "model": "openai/gpt-oss-20b",
+        "wall_time": 3.1678379000077257,
+        "all_passed": true,
+        "failed_tests": [],
+        "cost_usd": 0.000915,
+        "tokens": 1505,
+        "code_len": 1508
+      }
+    ]
+  },
+  "lat_pass_120b": 4.92,
+  "lat_fail_120b": 0.0,
+  "lat_pass_20b": 3.39,
+  "lat_fail_20b": 4.25,
+  "pass_rate_120b": 1.0,
+  "pass_rate_20b": 0.2
+}
