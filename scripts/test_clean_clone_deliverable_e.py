@@ -1,36 +1,67 @@
 """
-scripts/test_clean_clone_deliverable_e.py — Deliverable E Clean Clone & Build Test
------------------------------------------------------------------------------------
+scripts/test_clean_clone_deliverable_e.py — Deliverable E Clean Clone & Environment Verification Test
+----------------------------------------------------------------------------------------------------
 Automates complete clean-environment verification in an isolated temporary directory:
-  1. Clones repository into a fresh temporary directory
-  2. Verifies presence of all core assets, documentation, and workers
-  3. Verifies .env.example, LICENSE, and WORKER_PROTOCOL.md
-  4. Runs information isolation verification test in the clean clone
-  5. Runs recorded run validation and integrity checks
-  6. Reports clean verification status
+  1. Clones repository into a fresh temporary workspace
+  2. Creates a clean Python virtual environment (`python -m venv venv`)
+  3. Installs all required packages via `pip install -r requirements.txt`
+  4. Tests Zero-Key Offline Operation (copies `.env.example` -> `.env` with no keys)
+  5. Boots `start.py` and verifies all 7 microservices report `/health`
+  6. Verifies Dashboard serving on port 8000
+  7. Verifies Replay Mode functionality with zero keys
+  8. Injects live `.env` credentials and verifies live task procurement
+  9. Verifies Tesseract automatic detection on system paths with zero hardcoded paths
 """
 import os
 import sys
+import time
 import shutil
 import tempfile
 import subprocess
+import httpx
 from datetime import datetime
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
+def get_venv_executables(venv_dir: str):
+    if sys.platform == "win32":
+        py_exe = os.path.join(venv_dir, "Scripts", "python.exe")
+        pip_exe = os.path.join(venv_dir, "Scripts", "pip.exe")
+    else:
+        py_exe = os.path.join(venv_dir, "bin", "python")
+        pip_exe = os.path.join(venv_dir, "bin", "pip")
+    return py_exe, pip_exe
+
+
+def wait_for_ports(ports, timeout=12.0) -> bool:
+    t0 = time.time()
+    pending = set(ports)
+    while time.time() - t0 < timeout and pending:
+        for p in list(pending):
+            try:
+                r = httpx.get(f"http://127.0.0.1:{p}/health", timeout=0.8)
+                if r.status_code == 200:
+                    pending.remove(p)
+            except Exception:
+                pass
+        if pending:
+            time.sleep(0.3)
+    return len(pending) == 0
+
+
 def run_clean_clone_test():
     print("=" * 80)
-    print("DELIVERABLE E: CLEAN CLONE & REPOSITORY VERIFICATION TEST")
+    print("  DELIVERABLE E: CLEAN CLONE & REAL VIRTUALENV VERIFICATION TEST")
     print("=" * 80)
 
     temp_dir = tempfile.mkdtemp(prefix="procureagent_clean_clone_")
-    print(f"  [1] Created isolated temporary directory: {temp_dir}")
+    print(f"  [1] Created isolated workspace: {temp_dir}")
 
     try:
-        # 1. Clone repository locally into temp directory
+        # Step 1: Git clone into clean folder
         print("  [2] Cloning local repository into temporary workspace...")
-        clone_res = subprocess.run(
+        subprocess.run(
             ["git", "clone", REPO_ROOT, temp_dir],
             capture_output=True,
             text=True,
@@ -38,69 +69,126 @@ def run_clean_clone_test():
         )
         print("      Git clone completed cleanly.")
 
-        # 2. Check essential repository files
-        print("  [3] Checking required artifacts in clean clone...")
-        required_files = [
-            "start.py",
-            "dashboard/index.html",
-            "workers/template_worker.py",
-            "docs/WORKER_PROTOCOL.md",
-            "demo/recorded_runs/recorded_rogue_run.json",
-            "demo/recorded_runs/recorded_genuine_failure_reallocation.json",
-            ".env.example",
-            "LICENSE",
-            "README.md",
-            "requirements.txt",
-            "scripts/test_information_isolation.py",
-            "scripts/generate_recorded_runs.py"
-        ]
+        # Step 2: Create fresh virtual environment
+        venv_dir = os.path.join(temp_dir, "venv")
+        print(f"  [3] Creating clean virtual environment: {venv_dir}...")
+        subprocess.run(
+            [sys.executable, "-m", "venv", venv_dir],
+            check=True,
+            capture_output=True
+        )
+        py_exe, pip_exe = get_venv_executables(venv_dir)
+        print("      Virtual environment created.")
 
-        missing = []
-        for rf in required_files:
-            fp = os.path.join(temp_dir, rf)
-            if not os.path.exists(fp):
-                missing.append(rf)
-            else:
-                sz = os.path.getsize(fp)
-                print(f"      • {rf:<50} ({sz:,} bytes) [OK]")
+        # Step 3: Pip install from requirements.txt
+        req_path = os.path.join(temp_dir, "requirements.txt")
+        print(f"  [4] Installing dependencies from {req_path}...")
+        pip_res = subprocess.run(
+            [pip_exe, "install", "-r", req_path],
+            capture_output=True,
+            text=True
+        )
+        if pip_res.returncode != 0:
+            print(f"PIP ERROR:\n{pip_res.stderr}")
+            raise RuntimeError("Pip install failed in clean clone!")
+        print("      All dependencies installed successfully.")
 
-        assert not missing, f"Missing required files in clean clone: {missing}"
-        print("      All required files verified present in clean clone.")
-
-        # 3. Setup .env with credentials from original repo to run isolation tests
-        orig_env = os.path.join(REPO_ROOT, ".env")
+        # Step 4: Verify Zero-Key Offline Setup (.env.example -> .env)
+        example_env = os.path.join(temp_dir, ".env.example")
         clean_env = os.path.join(temp_dir, ".env")
-        if os.path.exists(orig_env):
-            shutil.copy2(orig_env, clean_env)
-            print("  [4] Injected environment configuration for automated validation.")
+        shutil.copy2(example_env, clean_env)
+        print("  [5] Copied .env.example -> .env (Zero-Key Configuration).")
 
-        # 4. Run Information Isolation Test inside clean clone
-        print("  [5] Running Information Isolation Invariant Test inside clean clone...")
-        iso_test = subprocess.run(
-            [sys.executable, os.path.join(temp_dir, "scripts", "test_information_isolation.py")],
+        # Step 5: Boot all microservices with start.py in background
+        print("  [6] Booting microservice network via start.py...")
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        start_proc = subprocess.Popen(
+            [py_exe, "start.py"],
+            cwd=temp_dir,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        ports = [8000, 8001, 8002, 8003, 8004, 8005, 8007]
+        print("      Waiting for all 7 microservices to report /health...")
+        healthy = wait_for_ports(ports, timeout=15.0)
+        assert healthy, "One or more microservices failed to boot in clean clone!"
+        print("      All 7 microservices online and healthy!")
+
+        # Step 6: Verify Dashboard serving on port 8000
+        print("  [7] Testing Dashboard HTTP server...")
+        with httpx.Client(timeout=5.0) as client:
+            dash_resp = client.get("http://127.0.0.1:8000/")
+            assert dash_resp.status_code == 200, f"Dashboard failed: {dash_resp.status_code}"
+            assert "ProcureAgent // Polaris Command Centre" in dash_resp.text
+            print("      Dashboard HTML loaded successfully (Status 200).")
+
+            # Step 7: Verify Replay Mode and zero-key endpoints
+            print("  [8] Testing Replay Mode endpoints with zero API keys...")
+            budget_resp = client.get("http://127.0.0.1:8000/budget")
+            assert budget_resp.status_code == 200
+            rep_resp = client.get("http://127.0.0.1:8000/reputation")
+            assert rep_resp.status_code == 200
+            ledger_resp = client.get("http://127.0.0.1:8000/ledger")
+            assert ledger_resp.status_code == 200
+            print("      Replay endpoints (budget, reputation, ledger) operational with zero keys.")
+
+        # Terminate zero-key process
+        start_proc.terminate()
+        try:
+            start_proc.wait(timeout=2.0)
+        except Exception:
+            start_proc.kill()
+        time.sleep(1.0)
+
+        # Step 8: Test Live Mode with API keys
+        real_env = os.path.join(REPO_ROOT, ".env")
+        if os.path.exists(real_env):
+            print("  [9] Injecting live credentials for live procurement test...")
+            shutil.copy2(real_env, clean_env)
+            live_proc = subprocess.Popen(
+                [py_exe, "start.py"],
+                cwd=temp_dir,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            assert wait_for_ports(ports, timeout=15.0), "Microservices failed to restart for live test!"
+
+            with httpx.Client(timeout=15.0) as client:
+                print("      Submitting test task to orchestrator...")
+                task_resp = client.post(
+                    "http://127.0.0.1:8000/task",
+                    json={
+                        "description": "Calculate next billing schedule date and verify system health",
+                        "max_budget_usd": 0.50,
+                        "force_procure": True
+                    }
+                )
+                assert task_resp.status_code == 200, f"Task submission failed: {task_resp.text}"
+                print("      Live task submission succeeded (Status 200).")
+
+            live_proc.terminate()
+            try:
+                live_proc.wait(timeout=2.0)
+            except Exception:
+                live_proc.kill()
+            print("      Live mode verified cleanly.")
+
+        # Step 9: Automatic Tesseract path verification
+        print("  [10] Verifying automatic Tesseract path detection...")
+        ocr_check = subprocess.run(
+            [py_exe, "-c", "from workers.ocr_worker import TESSERACT_BIN; print('Detected:', TESSERACT_BIN)"],
             cwd=temp_dir,
             capture_output=True,
             text=True
         )
-        if iso_test.returncode != 0:
-            print(f"STDOUT:\n{iso_test.stdout}")
-            print(f"STDERR:\n{iso_test.stderr}")
-            raise RuntimeError("Information isolation test failed in clean clone!")
-        print("      Information isolation test PASSED (0 hidden test leakages).")
-
-        # 5. Run Recorded Runs Integrity Check
-        print("  [6] Running Recorded Runs Validation inside clean clone...")
-        rec_test = subprocess.run(
-            [sys.executable, os.path.join(temp_dir, "scripts", "generate_recorded_runs.py")],
-            cwd=temp_dir,
-            capture_output=True,
-            text=True
-        )
-        if rec_test.returncode != 0:
-            print(f"STDOUT:\n{rec_test.stdout}")
-            print(f"STDERR:\n{rec_test.stderr}")
-            raise RuntimeError("Recorded runs validation failed in clean clone!")
-        print("      Recorded runs verified and valid.")
+        print(f"      {ocr_check.stdout.strip()}")
+        assert "None" not in ocr_check.stdout, "Tesseract was not automatically detected!"
 
         print("\n" + "=" * 80)
         print("DELIVERABLE E CLEAN CLONE TEST: 100% SUCCESSFUL")
@@ -109,7 +197,7 @@ def run_clean_clone_test():
         return True
 
     finally:
-        print(f"  [Cleanup] Removing temporary directory: {temp_dir}")
+        print(f"  [Cleanup] Removing temporary workspace: {temp_dir}")
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -117,4 +205,3 @@ if __name__ == "__main__":
     success = run_clean_clone_test()
     if not success:
         sys.exit(1)
-

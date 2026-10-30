@@ -35,16 +35,16 @@ from broker.deadline_scorer import score_bids_with_deadline
 
 REPO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo_repos", "billing_engine"))
 
-# Historical runs from previous Gate 4 benchmarks and 5-run reallocation tests:
+# Historical runs from previous Gate 4 benchmarks and dynamic reallocation tests:
 # Gate 4: 10 runs 120B (avg 4.67s, 10/10 pass), 10 runs 20B (avg 9.02s, 3/10 pass)
-# 5-run reallocation: 5 runs 20B (avg 3.01s, 2/5 pass), 5 runs 120B (avg 3.82s, 5/5 pass)
+# 5-run reallocation: 5 runs 20B (avg 3.01s, 2/5 pass); 120B only invoked on the 3 failures (avg 3.81s, 3/3 pass)
 HISTORICAL_120B = [
     4.52, 4.88, 4.61, 4.70, 4.45, 4.92, 4.58, 4.77, 4.63, 4.65,  # Gate 4 10 runs
-    3.78, 3.84, 3.75, 3.90, 3.82                                   # 5-run reallocations
+    3.78, 3.84, 3.82                                               # 3 reallocation runs (runs 2, 3, 4 where 20B failed)
 ]
 HISTORICAL_20B = [
     8.92, 9.15, 8.80, 9.40, 8.75, 9.20, 8.95, 9.30, 8.85, 8.90,  # Gate 4 10 runs
-    2.75, 3.12, 2.95, 3.25, 2.98                                   # 5-run reallocations
+    2.75, 3.12, 2.95, 3.25, 2.98                                   # 5-run reallocations (all 5 runs attempted)
 ]
 
 
@@ -133,18 +133,19 @@ async def main():
     print(f"{'Average Cost per Call':<30} | ${sum(r['cost_usd'] for r in results_120b)/10:.5f} USD{' ':<7} | ${sum(r['cost_usd'] for r in results_20b)/10:.5f} USD")
     print("=" * 80)
 
-    # Rolling Averages (Combining all recorded runs: 15 historical + 10 current = 25 runs per model)
+    # Rolling Averages (120B: 13 historical + 10 current = 23 runs; 20B: 15 historical + 10 current = 25 runs)
     all_lat_120b = HISTORICAL_120B + [r["wall_time"] for r in results_120b]
     all_lat_20b = HISTORICAL_20B + [r["wall_time"] for r in results_20b]
     rolling_avg_120b = sum(all_lat_120b) / len(all_lat_120b)
     rolling_avg_20b = sum(all_lat_20b) / len(all_lat_20b)
-    sample_size = len(all_lat_120b)
+    n_120b = len(all_lat_120b)
+    n_20b = len(all_lat_20b)
 
     print("\n" + "=" * 80)
-    print(f"GRAND ROLLING AVERAGE LATENCY (Sample Size N = {sample_size} runs per model)")
+    print(f"GRAND ROLLING AVERAGE LATENCY (Empirical Runs: 120B N={n_120b}, 20B N={n_20b})")
     print("=" * 80)
-    print(f"  • code-worker-01 (120B) Rolling Latency : {rolling_avg_120b:.2f}s  (N = {sample_size})")
-    print(f"  • code-worker-02 (20B)  Rolling Latency : {rolling_avg_20b:.2f}s  (N = {sample_size})")
+    print(f"  • code-worker-01 (120B) Rolling Latency : {rolling_avg_120b:.2f}s  (N = {n_120b})")
+    print(f"  • code-worker-02 (20B)  Rolling Latency : {rolling_avg_20b:.2f}s  (N = {n_20b})")
     print("-" * 80)
     if rolling_avg_20b < rolling_avg_120b:
         print(f"  Result: 20B is faster on average ({rolling_avg_20b:.2f}s vs {rolling_avg_120b:.2f}s, advantage {rolling_avg_120b/rolling_avg_20b:.2f}x).")
@@ -153,33 +154,34 @@ async def main():
     print("=" * 80)
 
     # Evaluate Scored Decisions for Tight (6s) and Loose (30s) Deadlines
+    # Candidate bids derived strictly from worker pricing formulas and empirical Bayesian posteriors
     candidate_bids = [
         {
             "worker_id": "code-worker-01",
             "name": "Python Code Generation Specialist (120B)",
             "status": "BID",
-            "bid_usd": 0.35,
+            "bid_usd": 0.30,  # Computed from workers/code_worker.py: raw_cost * 1.25 + 0.30
             "measured_latency": round(rolling_avg_120b, 2),
             "estimated_seconds": round(rolling_avg_120b, 2),
-            "reputation_score": 0.95,
+            "reputation_score": 0.9615,  # Beta(2+23, 1+0) = Beta(25, 1) = 25/26 from 23/23 passing
         },
         {
             "worker_id": "code-worker-02",
             "name": "Fast Code Generation Specialist (20B)",
             "status": "BID",
-            "bid_usd": 0.25,
+            "bid_usd": 0.22,  # Computed from workers/code_worker_20b.py: raw_cost * 1.25 + 0.22
             "measured_latency": round(rolling_avg_20b, 2),
             "estimated_seconds": round(rolling_avg_20b, 2),
-            "reputation_score": 0.85,
+            "reputation_score": 0.3214,  # Beta(2+7, 1+18) = Beta(9, 19) = 9/28 from 7/25 passing
         },
         {
             "worker_id": "rogue-worker-01",
-            "name": "Rogue Worker (Adversarial)",
+            "name": "Rogue Worker (Adversarial Fixture)",
             "status": "BID",
-            "bid_usd": 0.05,
-            "measured_latency": 0.10,
-            "estimated_seconds": 0.10,
-            "reputation_score": 0.20,
+            "bid_usd": 0.18,  # Computed from workers/rogue_worker.py: max_bid(0.50) * 0.36
+            "measured_latency": 1.00,
+            "estimated_seconds": 1.00,
+            "reputation_score": 0.6667,  # Fresh worker starting at unpenalized Beta(2, 1) prior = 2/3
         }
     ]
 

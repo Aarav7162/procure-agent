@@ -179,5 +179,5 @@ Workers begin with a $\text{Beta}(2, 1)$ prior (expected mean $\mu = \frac{2}{3}
 
 ## 5. Reference Implementation
 
-See [`workers/template_worker.py`](file:///c:/Users/aarav.SOMEGUYWITHPRET/PayPal%20Hackathon/workers/template_worker.py) for an executable reference implementation using FastAPI and Uvicorn.
+See [`workers/template_worker.py`](../workers/template_worker.py) for an executable reference implementation using FastAPI and Uvicorn.
 
