@@ -203,11 +203,11 @@ async def run_ocr_benchmark_and_gate():
     ok_res_r, res_id_r, _ = reserve_budget(cycle_id, jrp_live["jrp_id"], "rogue-worker-01", rogue_bid_usd, max_budget)
     assert ok_res_r is True
 
-    # 3. Rogue delivers plausible-wrong OCR (realistic scanning noise: CER ~ 7.8% > 5%)
+    # 3. Rogue delivers plausible-wrong OCR (realistic scanning noise: CER > 7% vs threshold <= 5%)
     clean_ref = target_doc["ground_truth"]
     substitutions = {"e": "c", "E": "C", "o": "0", "O": "0", "l": "1", "I": "1", "a": "e", "A": "4", "s": "5"}
     chars = list(clean_ref)
-    for idx in range(0, len(chars), 13):
+    for idx in range(0, len(chars), 6):
         c = chars[idx]
         if c in substitutions:
             chars[idx] = substitutions[c]

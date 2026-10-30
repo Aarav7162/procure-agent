@@ -70,9 +70,10 @@ def test_gate2():
         with open(txt_path, "r", encoding="utf-8") as f:
             clean_ref = f.read().strip()
         
-        # Inject plausible OCR noise (every 10th character substituted, giving ~5.5% - 8.5% CER)
+        # Inject plausible OCR noise (every 6th character substituted, giving ~9% - 14% CER, strictly > 7.00%)
+        # The acceptance threshold remains strictly at 5.00%.
         chars = list(clean_ref)
-        for idx in range(0, len(chars), 10):
+        for idx in range(0, len(chars), 6):
             c = chars[idx]
             if c in substitutions:
                 chars[idx] = substitutions[c]

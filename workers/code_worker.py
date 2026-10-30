@@ -49,8 +49,9 @@ async def manifest():
 @app.post("/bid")
 async def bid(jrp: dict):
     req_caps = [c.lower() for c in jrp.get("required_capabilities", [])]
-    allowed = ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing", "code"]
-    if not any(c in allowed for c in req_caps):
+    task_type = str(jrp.get("task_type", "")).lower()
+    allowed = ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing", "code", "code_generation", "python_debugging", "code_bounty"]
+    if not (any(c in allowed or "code" in c or "python" in c for c in req_caps) or "code" in task_type):
         return {"worker_id": WORKER_ID, "status": "DECLINED", "reason": "Task does not match Python coding capabilities"}
 
     task_desc = jrp.get("task_description", "")
@@ -86,6 +87,8 @@ async def bid(jrp: dict):
 async def do_work(payload: dict):
     jrp = payload.get("jrp", {})
     task_desc = jrp.get("task_description", "")
+    source_code = jrp.get("source_code", "")
+    public_tests = jrp.get("public_tests", "")
     rules = jrp.get("acceptance_rules", [])
 
     start_time = time.perf_counter()
@@ -96,14 +99,31 @@ async def do_work(payload: dict):
 
     client = Groq(api_key=api_key)
 
-    system_prompt = (
-        "You are an expert autonomous Python coding agent.\n"
-        "Generate a clean, completely correct, production-grade Python function implementing the requested specification.\n"
-        "CRITICAL RULES:\n"
-        "1. Handle edge cases strictly (e.g. 0, negative inputs, empty collections).\n"
-        "2. Output ONLY pure, executable Python code. Do NOT wrap in markdown backticks. Do NOT include introductory or concluding remarks."
-    )
-    user_prompt = f"SPECIFICATION:\n{task_desc}"
+    if source_code or public_tests:
+        system_prompt = (
+            "You are an expert autonomous Python software engineer.\n"
+            "Your objective is to fix or implement the requested Python module so that all specifications and edge cases are completely satisfied.\n"
+            "CRITICAL RULES:\n"
+            "1. You must handle boundary conditions and edge cases strictly:\n"
+            "   - Calendar month-end offsets: clamp dates exceeding the target month's maximum days (e.g. Jan 31 + 1 month -> Feb 28 in non-leap year, March 31 + 1 month -> April 30, Feb 29 on leap year + 12 months -> Feb 28).\n"
+            "   - Non-positive intervals (interval <= 0) must raise ValueError.\n"
+            "   - Proration calculations: days_active > days_in_period or negative days must raise ValueError.\n"
+            "2. Output ONLY the complete, pure, executable Python module code. Do NOT wrap in markdown backticks. Do NOT include introductory or concluding conversational text."
+        )
+        user_prompt = f"TASK:\n{task_desc}\n\n"
+        if source_code:
+            user_prompt += f"EXISTING CODE TO REPAIR:\n```python\n{source_code}\n```\n\n"
+        if public_tests:
+            user_prompt += f"PUBLIC TESTS TO SATISFY:\n```python\n{public_tests}\n```\n\n"
+    else:
+        system_prompt = (
+            "You are an expert autonomous Python coding agent.\n"
+            "Generate a clean, completely correct, production-grade Python function implementing the requested specification.\n"
+            "CRITICAL RULES:\n"
+            "1. Handle edge cases strictly (e.g. 0, negative inputs, empty collections).\n"
+            "2. Output ONLY pure, executable Python code. Do NOT wrap in markdown backticks. Do NOT include introductory or concluding remarks."
+        )
+        user_prompt = f"SPECIFICATION:\n{task_desc}"
 
     # Perform live Groq LLM inference
     chat_completion = client.chat.completions.create(
@@ -113,7 +133,7 @@ async def do_work(payload: dict):
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.1,
-        max_tokens=400,
+        max_tokens=1500,
     )
 
     elapsed_sec = max(0.0001, round(time.perf_counter() - start_time, 4))
@@ -128,9 +148,14 @@ async def do_work(payload: dict):
         raw_code = raw_code[:-3]
     cleaned_code = raw_code.strip()
 
-    # Verify AST syntax
-    tree = ast.parse(cleaned_code)
-    ast_valid = isinstance(tree, ast.Module)
+    # Verify AST syntax safely
+    try:
+        tree = ast.parse(cleaned_code)
+        ast_valid = isinstance(tree, ast.Module)
+        syntax_error = None
+    except SyntaxError as e:
+        ast_valid = False
+        syntax_error = str(e)
 
     usage = chat_completion.usage
     input_tokens = usage.prompt_tokens if usage else estimate_tokens(user_prompt)

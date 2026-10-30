@@ -149,3 +149,4 @@ def record_worker_outcome(worker_id: str, success: bool, task_id: str, notes: st
         "allocation_cap_usd": allocation_cap,
         "notes": notes,
     }
+
