@@ -1,0 +1,11 @@
+# ProcureAgent Autonomous Capability Procurement Policy
+# Enforced by orchestrator/policy.py before creating escrows or posting JRPs
+
+weekly_spend_cap_usd: 25.00
+
+allowed_task_types:
+  - "code_bounty"
+  - "document_ocr"
+  - "llm_synthesis"
+
+approval_threshold_usd: 5.00
