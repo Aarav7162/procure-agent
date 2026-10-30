@@ -57,7 +57,7 @@ def run_clean_clone_test():
     print("  DELIVERABLE E: CLEAN CLONE & REAL VIRTUALENV VERIFICATION TEST")
     print("=" * 80)
 
-    temp_dir = tempfile.mkdtemp(prefix="procureagent_clean_clone_")
+    temp_dir = os.path.realpath(tempfile.mkdtemp(prefix="procureagent_clean_clone_"))
     print(f"  [1] Created isolated workspace: {temp_dir}")
 
     try:
@@ -105,18 +105,27 @@ def run_clean_clone_test():
         print("  [6] Booting microservice network via start.py...")
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
+        offline_log = open(os.path.join(temp_dir, "offline_start.log"), "w", encoding="utf-8")
         start_proc = subprocess.Popen(
             [py_exe, "start.py"],
             cwd=temp_dir,
             env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=offline_log,
+            stderr=subprocess.STDOUT,
             text=True
         )
 
         ports = [8000, 8001, 8002, 8003, 8004, 8005, 8007]
         print("      Waiting for all 7 microservices to report /health...")
-        healthy = wait_for_ports(ports, timeout=25.0)
+        healthy = wait_for_ports(ports, timeout=30.0)
+        if not healthy:
+            offline_log.flush()
+            print(f"      [ERROR] start.py returncode: {start_proc.poll()}")
+            try:
+                with open(os.path.join(temp_dir, "offline_start.log"), "r", encoding="utf-8") as lf:
+                    print(f"      [start.py LOG]:\n{lf.read()}")
+            except Exception as e:
+                print(f"      [Could not read log]: {e}")
         assert healthy, "One or more microservices failed to boot in clean clone!"
         print("      All 7 microservices online and healthy!")
 
@@ -144,6 +153,7 @@ def run_clean_clone_test():
             start_proc.wait(timeout=2.0)
         except Exception:
             start_proc.kill()
+        offline_log.close()
         time.sleep(1.0)
 
         # Step 8: Test Live Mode with API keys
@@ -151,15 +161,25 @@ def run_clean_clone_test():
         if os.path.exists(real_env):
             print("  [9] Injecting live credentials for live procurement test...")
             shutil.copy2(real_env, clean_env)
+            live_log = open(os.path.join(temp_dir, "live_start.log"), "w", encoding="utf-8")
             live_proc = subprocess.Popen(
                 [py_exe, "start.py"],
                 cwd=temp_dir,
                 env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=live_log,
+                stderr=subprocess.STDOUT,
                 text=True
             )
-            assert wait_for_ports(ports, timeout=25.0), "Microservices failed to restart for live test!"
+            healthy_live = wait_for_ports(ports, timeout=30.0)
+            if not healthy_live:
+                live_log.flush()
+                print(f"      [ERROR] live start.py returncode: {live_proc.poll()}")
+                try:
+                    with open(os.path.join(temp_dir, "live_start.log"), "r", encoding="utf-8") as lf:
+                        print(f"      [live start.py LOG]:\n{lf.read()}")
+                except Exception as e:
+                    print(f"      [Could not read live log]: {e}")
+            assert healthy_live, "Microservices failed to restart for live test!"
 
             with httpx.Client(timeout=15.0) as client:
                 print("      Submitting test task to orchestrator...")
@@ -179,6 +199,7 @@ def run_clean_clone_test():
                 live_proc.wait(timeout=2.0)
             except Exception:
                 live_proc.kill()
+            live_log.close()
             print("      Live mode verified cleanly.")
 
         # Step 9: Automatic Tesseract path verification
