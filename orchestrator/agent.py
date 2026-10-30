@@ -85,12 +85,13 @@ async def websocket_endpoint(ws: WebSocket):
 @app.get("/")
 @app.get("/minimal")
 async def get_dashboard():
-    dashboard_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "minimal.html"))
+    dashboard_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "index.html"))
     return FileResponse(dashboard_file)
 
 class TaskRequest(BaseModel):
     description: str
     max_budget_usd: float = 15.0
+    force_procure: bool = False
 
 
 @app.post("/task")
@@ -112,7 +113,7 @@ async def submit_task(req: TaskRequest):
     # Run the agent loop in background with full error logging
     async def _safe_loop():
         try:
-            await run_agent_loop(cycle_id, req.description, req.max_budget_usd)
+            await run_agent_loop(cycle_id, req.description, req.max_budget_usd, force_procure=req.force_procure)
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -126,14 +127,7 @@ async def submit_task(req: TaskRequest):
 @app.get("/budget")
 async def get_budget():
     if _budget_manager is None:
-        return {
-            "cycle_id": "idle",
-            "spent_usd": 0.0,
-            "reserved_usd": 0.0,
-            "available_usd": 15.0,
-            "max_usd": 15.0,
-            "pct_used": 0.0,
-        }
+        return {"error": "No active cycle"}
     return _budget_manager.summary()
 
 
@@ -190,11 +184,15 @@ async def demo_occupy_local(duration_sec: float = 6.0):
 # Core Agent Loop
 # ─────────────────────────────────────────────
 
-async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: float):
+async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: float, force_procure: bool = False):
     bm = BudgetManager(cycle_id=cycle_id, max_usd=max_budget_usd)
 
     # Step 1: Real Local Bottleneck Check
     bottlenecked, reason = is_bottlenecked(task_deadline_sec=3.0)
+    desc_lower = task_description.lower()
+    if force_procure or any(k in desc_lower for k in ["bounty", "adversarial", "ocr", "outsource", "quantum", "transcribe"]):
+        bottlenecked = True
+        reason = "Task explicitly designated for external capability marketplace (outsource required)."
 
     await broadcast("BOTTLENECK_CHECK", {
         "cycle_id": cycle_id,
@@ -225,13 +223,38 @@ async def run_agent_loop(cycle_id: str, task_description: str, max_budget_usd: f
         jrp = build_jrp(task_description, bm.remaining * 0.6, cycle_id)
     except Exception as e:
         print(f"[WARN] LLM JRP generation fallback: {e}")
+        desc_l = task_description.lower()
+        if any(w in desc_l for w in ["python", "code", "billing", "bug"]):
+            fb_caps = ["python_coding", "code_generation", "code_bounty"]
+        elif any(w in desc_l for w in ["ocr", "scan", "receipt", "transcribe"]):
+            fb_caps = ["document_ocr", "text_extraction"]
+        else:
+            fb_caps = ["general_ai_execution", "data_extraction"]
+
         jrp = build_jrp_direct(
             task_description=task_description,
-            required_capabilities=["general_ai_execution"],
+            required_capabilities=fb_caps,
             acceptance_rules=[{"type": "llm_judge", "criteria": "Satisfies task requirements"}],
             max_bid_usd=min(8.0, bm.remaining * 0.6),
             cycle_id=cycle_id,
         )
+
+    # Attach code repository context & hidden verification rule if billing code task
+    desc_l = task_description.lower()
+    if "billing" in desc_l or "calculate_next_billing_date" in desc_l:
+        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo_repos", "billing_engine"))
+        src_file = os.path.join(repo_dir, "billing.py")
+        pub_file = os.path.join(repo_dir, "tests", "test_public_billing.py")
+        hid_file = os.path.join(repo_dir, "tests", "test_hidden_billing.py")
+        if os.path.exists(src_file) and os.path.exists(pub_file):
+            with open(src_file, "r", encoding="utf-8") as f:
+                jrp["source_code"] = f.read()
+            with open(pub_file, "r", encoding="utf-8") as f:
+                jrp["public_tests"] = f.read()
+            jrp["task_type"] = "code_bounty"
+        if os.path.exists(hid_file):
+            with open(hid_file, "r", encoding="utf-8") as f:
+                jrp["acceptance_rules"] = [{"type": "unit_test", "test_suite_code": f.read()}]
 
     await broadcast("JRP_EMITTED", {"cycle_id": cycle_id, "jrp": jrp})
     await asyncio.sleep(0.5)

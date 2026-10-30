@@ -34,10 +34,18 @@ WORKER_REGISTRY = [
     },
     {
         "worker_id": "code-worker-01",
-        "name": "Python Code Generation Specialist",
-        "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing"],
+        "name": "Python Code Generation Specialist (120B)",
+        "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing", "code_generation", "python_debugging", "code_bounty"],
         "port": int(os.getenv("CODE_WORKER_PORT", 8003)),
         "worker_paypal_email": CODE_WORKER_PAYPAL_EMAIL,
+        "pricing_model": "token_metered_llm",
+    },
+    {
+        "worker_id": "code-worker-02",
+        "name": "Fast Code Generation Specialist (20B)",
+        "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing", "code_generation", "python_debugging", "code_bounty"],
+        "port": int(os.getenv("CODE_WORKER_20B_PORT", 8007)),
+        "worker_paypal_email": os.getenv("CODE_WORKER_20B_PAYPAL_EMAIL", LLM_WORKER_PAYPAL_EMAIL),
         "pricing_model": "token_metered_llm",
     },
     {

@@ -40,7 +40,7 @@ async def manifest():
         "name": "Fast Python Code Specialist (20B)",
         "capabilities": ["python_coding", "unit_testable_functions", "algorithmic_tasks", "bug_fixing", "code_generation", "code_bounty"],
         "accepted_input_formats": ["python_spec", "json"],
-        "port": int(os.getenv("CODE_WORKER_20B_PORT", 8006)),
+        "port": int(os.getenv("CODE_WORKER_20B_PORT", 8007)),
         "worker_paypal_email": CODE_WORKER_20B_PAYPAL_EMAIL,
         "pricing_model": "token_metered_llm_fast",
         "model": GROQ_MODEL_20B,
@@ -198,4 +198,10 @@ async def health():
         "model": GROQ_MODEL_20B,
         "worker_paypal_email": CODE_WORKER_20B_PAYPAL_EMAIL,
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("workers.code_worker_20b:app", host="0.0.0.0", port=int(os.getenv("CODE_WORKER_20B_PORT", 8007)), reload=False)
+
 

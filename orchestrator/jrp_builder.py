@@ -49,7 +49,7 @@ def build_jrp(task_description: str, max_budget_usd: float, cycle_id: str) -> di
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
-        max_tokens=650,
+        max_tokens=1500,
     )
 
     raw = response.choices[0].message.content.strip()

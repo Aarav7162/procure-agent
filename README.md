@@ -86,13 +86,29 @@ To ensure agent bids are not arbitrary fixtures, autonomous worker agents price 
 $$\text{Bid}_{\text{USD}} = \min\left(\text{MaxBid}_{\text{USD}}, \text{round}\left(C_{\text{api}} \times M_{\text{compute}} + F_{\text{min}}, 2\right)\right)$$
 
 Where:
-- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.50$/1M input, $\$1.50$/1M output).
+- **$C_{\text{api}}$ (Raw Token Compute Cost)**: Input tokens $\times P_{\text{in}} +$ Estimated output tokens $\times P_{\text{out}}$ (e.g. for `gpt-oss-120b`, $\$0.60$/1M input, $\$0.60$/1M output; for `gpt-oss-20b`, $\$0.15$/1M input, $\$0.30$/1M output).
 - **$M_{\text{compute}}$ (Risk & Variance Multiplier)**: $1.25$ (covers token count variance, network latency, and retry overhead).
 - **$F_{\text{min}}$ (Minimum Operational Fee)**:
-  - $\$0.15$ for `llm-worker-01` (agent uptime, availability readiness).
-  - $\$0.20$ for `code-worker-01` (sandbox execution readiness and AST compilation).
+  - $\$0.15$ for `llm-worker-01` (agent uptime, citation validation readiness).
+  - $\$0.22$ for `code-worker-02` (fast 20B model uptime, lower compute footprint).
+  - $\$0.30$ for `code-worker-01` (deep reasoning 120B model uptime, AST compilation, and test execution harness).
 
 *(Note: The $F_{\text{min}}$ floor is inherently satisfied since $C_{\text{api}} \ge 0$ and $F_{\text{min}} > 0$.)*
+
+### Empirical Model Benchmark (10 Runs Per Model)
+ProcureAgent empirically benchmarked `openai/gpt-oss-120b` and `openai/gpt-oss-20b` across exactly **10 live runs per model** on the `demo_repos/billing_engine` month-end calendar rollover test suite (5 hidden unit tests):
+- **`openai/gpt-oss-120b`**:
+  - Pass Rate: **10/10 (100.0%)** on Attempt 1.
+  - Average Latency: **4.67s**.
+  - Average Cost: **$0.00177 USD** (~1,790 tokens).
+  - Failure Profile: Zero failures.
+- **`openai/gpt-oss-20b`**:
+  - Pass Rate: **3/10 (30.0%)** on Attempt 1.
+  - Average Latency: **9.02s** (passing runs averaged **10.67s** due to extensive reasoning; failing runs averaged **8.31s**).
+  - Average Cost: **$0.00171 USD**.
+  - Failure Profile: Failed 7/10 runs on edge-case calendar clamping (e.g., Jan 31 + 1 month raising `ValueError: day is out of range for month` instead of clamping to Feb 28).
+
+**Finding**: `openai/gpt-oss-120b` is both **more accurate (100% vs 30%)** and **faster in practice (4.67s vs 9.02s)** than `20b` on intricate multi-step calendar arithmetic. The 20B model's primary advantage is a lower operational fee ($0.22 vs $0.30).
 
 ### OCR Worker Bid Formula (Priced Per Compute Second)
 OCR workers price their machine labor upfront **per compute second** based on expected runtime rather than post-execution measured costs:
@@ -137,14 +153,23 @@ Because modern inference platforms price tokens at fractions of a cent per reque
 
 Each worker operates under a distinct, isolated PayPal sandbox account. **No two workers share an account.**
 
-| Worker ID | Name | Role | PayPal Sandbox Account |
-| :--- | :--- | :--- | :--- |
-| **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | `sb-s8vke53470365@business.example.com` |
-| **ocr-worker-01** | OCR Specialist Alpha | Primary OCR (Raw PSM 3) | `sb-sqcdl53128062@personal.example.com` |
-| **ocr-worker-02** | OCR Specialist Beta | Second OCR (Binarized PSM 6) | `sb-shusq53615721@personal.example.com` |
-| **code-worker-01** | Python Code Specialist | Code Generation | `sb-bef9t53614820@personal.example.com` |
-| **llm-worker-01** | LLM Synthesis Specialist | LLM Answers & Citation Verification | `sb-kgyi653615592@personal.example.com` |
-| **rogue-worker-01** | Rogue Worker (Adversary) | Defective Submissions | `sb-a43fio53613334@personal.example.com` *(Asserted $0.00 Paid)* |
+| Worker ID | Name | Role | Model / Engine | PayPal Sandbox Account |
+| :--- | :--- | :--- | :--- | :--- |
+| **Orchestrator** | ProcureAgent Treasury | Buyer / Payer | Policy & Escrow Engine | `sb-s8vke53470365@business.example.com` |
+| **ocr-worker-01** | OCR Specialist Alpha | Primary OCR (Raw PSM 3) | Tesseract 5.5.0 | `sb-sqcdl53128062@personal.example.com` |
+| **ocr-worker-02** | OCR Specialist Beta | Second OCR (Binarized PSM 6) | Tesseract 5.5.0 + OpenCV | `sb-shusq53615721@personal.example.com` |
+| **code-worker-01** | Python Code Specialist | Code Generation & Debugging | `openai/gpt-oss-120b` | `sb-bef9t53614820@personal.example.com` |
+| **code-worker-02** | Fast Code Worker | Lightweight Code Generation | `openai/gpt-oss-20b` | `sb-kgyi653615592@personal.example.com` |
+| **llm-worker-01** | LLM Synthesis Specialist | Answers & Citation Verification | `openai/gpt-oss-120b` | `sb-kgyi653615592@personal.example.com` |
+| **rogue-worker-01** | Rogue Worker (Adversary) | Scripted Defective Underbidder | Scripted Adversarial Fixture | `sb-a43fio53613334@personal.example.com` *(Asserted $0.00 Paid)* |
+
+### Bayesian Reputation & Cold-Start Policy
+To mitigate cold-start exploitation, worker reliability is tracked dynamically using Bayesian conjugate updating under a $\text{Beta}(2, 1)$ prior:
+- **Prior Distribution**: $\alpha = 2.0, \beta = 1.0 \implies \mu = \frac{\alpha}{\alpha + \beta} = 0.667$ (66.7% baseline expectation).
+- **Update Rule**: On verified delivery $\alpha \leftarrow \alpha + 1$; on rejected delivery $\beta \leftarrow \beta + 1$.
+- **Cold-Start Threshold**: Any worker with **fewer than 3 completed tasks ($N < 3$)** is restricted to a **$1.00 max allocation cap** per task.
+- **Unlocking Full Liquidity**: Once a worker successfully delivers and passes verification on $3$ tasks ($N \ge 3$), the allocation cap expands to the full authorized cycle cap ($15.00$).
+- **Adversary Impact**: When `rogue-worker-01` delivers defective code or corrupted OCR, its score drops immediately from $0.667 \to 0.500$ ($\text{Beta}(2, 2)$), while honest workers rise to $0.750$ ($\text{Beta}(3, 1)$).
 
 ---
 

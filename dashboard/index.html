@@ -807,17 +807,17 @@
             <span>💳</span> PayPal Sandbox Live Settlement
           </div>
           <span id="paypal-status-pill" class="pill pill-paypal" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border-color: rgba(16, 185, 129, 0.4);">
-            PAYOUT_SUCCESS
+            IDLE
           </span>
         </div>
         <div class="paypal-grid">
           <div>
             <div class="paypal-field">Batch ID</div>
-            <div id="paypal-batch-id" class="paypal-value">S52G5UD2P2C34</div>
+            <div id="paypal-batch-id" class="paypal-value">—</div>
           </div>
           <div>
             <div class="paypal-field">Settled Amount</div>
-            <div id="paypal-amount" class="paypal-value">$0.30 USD</div>
+            <div id="paypal-amount" class="paypal-value">—</div>
           </div>
           <div style="grid-column: span 2;">
             <div class="paypal-field">Payer Account</div>
@@ -825,7 +825,7 @@
           </div>
           <div style="grid-column: span 2;">
             <div class="paypal-field">Recipient Account</div>
-            <div id="paypal-recipient" class="paypal-value" style="font-size: 10px; color: #94a3b8;">sb-bef9t53614820@personal.example.com</div>
+            <div id="paypal-recipient" class="paypal-value" style="font-size: 10px; color: #94a3b8;">—</div>
           </div>
         </div>
       </div>
@@ -879,7 +879,7 @@
           </tbody>
         </table>
         <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px;">
-          *Cold-start cap active (N &lt; 5 lifetime tasks limits exposure to $1.00 max).
+          *Cold-start cap active (N &lt; 3 completed tasks limits allocation to $1.00 max).
         </div>
       </div>
 
@@ -913,56 +913,58 @@
     // ─────────────────────────────────────────────────────────────
     // EMBEDDED RECORDED AUDIT RUN (ZERO-API-KEY FALLBACK)
     // ─────────────────────────────────────────────────────────────
-    const RECORDED_RUN = {
+    let RECORDED_RUN = {
       "metadata": {
         "title": "Autonomous Code Bounty Procurement & Settlement",
-        "paypal_batch_id": "S52G5UD2P2C34",
+        "cycle_id": "bounty_1793358223",
+        "paypal_batch_id": "YMRTQZU3GUNMA",
         "recipient": "sb-bef9t53614820@personal.example.com",
-        "amount_usd": 0.30
+        "amount_usd": 0.30,
+        "paypal_status": "PAYOUT_SUCCESS"
       },
       "events": [
         {
           "step": 1,
           "event": "TASK_RECEIVED",
-          "description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
+          "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription in billing.py",
           "max_budget_usd": 0.50,
-          "ts": "10:30:01"
+          "ts": "11:03:43"
         },
         {
           "step": 2,
           "event": "BOTTLENECK_CHECK",
           "bottlenecked": true,
-          "reason": "Host 1-slot execution queue occupied. Offloading machine labor off-chain.",
-          "ts": "10:30:02"
+          "reason": "Host 1-slot execution queue occupied by priority billing workload. Procuring external capability.",
+          "ts": "11:03:44"
         },
         {
           "step": 3,
           "event": "JRP_EMITTED",
           "jrp": {
-            "jrp_id": "jrp_bounty_61d1a44fcaee",
+            "jrp_id": "bounty_755d0bdcfd86",
             "task_type": "code_bounty",
             "max_bid_usd": 0.50,
             "required_capabilities": ["code_generation", "python_debugging"],
             "has_hidden_tests_leak": false
           },
-          "ts": "10:30:03"
+          "ts": "11:03:45"
         },
         {
           "step": 4,
           "event": "BIDS_RECEIVED",
           "bids": [
             { "worker_id": "rogue-worker-01", "model": "scripted_adversary_fixture", "bid_usd": 0.18, "estimated_seconds": 0.8, "reputation_score": 0.667, "composite_score": 0.8842, "status": "BID", "is_fixture": true },
-            { "worker_id": "code-worker-02", "model": "openai/gpt-oss-20b", "bid_usd": 0.22, "estimated_seconds": 9.02, "reputation_score": 0.385, "composite_score": 0.4117, "status": "BID" },
-            { "worker_id": "code-worker-01", "model": "openai/gpt-oss-120b", "bid_usd": 0.30, "estimated_seconds": 4.67, "reputation_score": 0.923, "composite_score": 0.3931, "status": "BID" }
+            { "worker_id": "code-worker-02", "model": "openai/gpt-oss-20b", "bid_usd": 0.22, "estimated_seconds": 9.0, "measured_latency": 9.02, "reputation_score": 0.385, "composite_score": 0.4117, "status": "BID" },
+            { "worker_id": "code-worker-01", "model": "openai/gpt-oss-120b", "bid_usd": 0.30, "estimated_seconds": 4.5, "measured_latency": 4.67, "reputation_score": 0.923, "composite_score": 0.3931, "status": "BID" }
           ],
-          "ts": "10:30:04"
+          "ts": "11:03:46"
         },
         {
           "step": 5,
           "event": "BID_AWARDED",
           "winner": { "worker_id": "rogue-worker-01", "bid_usd": 0.18, "is_fixture": true },
-          "award_reason": "Lowest price bid under market rate ($0.18 vs $0.22 / $0.30)",
-          "ts": "10:30:05"
+          "award_reason": "Underbid below market rate ($0.18 vs $0.22 / $0.30)",
+          "ts": "11:03:47"
         },
         {
           "step": 6,
@@ -971,14 +973,14 @@
           "amount_usd": 0.18,
           "reservation_id": "res_e732a7a25322",
           "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.18, "available_usd": 14.82, "max_usd": 15.00, "pct_used": 1.2 },
-          "ts": "10:30:06"
+          "ts": "11:03:48"
         },
         {
           "step": 7,
           "event": "DELIVERY_RECEIVED",
           "worker_id": "rogue-worker-01",
           "delivery": { "sha256_hash": "a4d81f14c0e66ec32b904944d154dfac3c538a7c2936a251210815147814ad59" },
-          "ts": "10:30:08"
+          "ts": "11:03:49"
         },
         {
           "step": 8,
@@ -987,7 +989,7 @@
           "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
           "acceptance": { "verified": false, "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month (Jan 31 + 1 month raised Feb 31 instead of Feb 28 clamping)" },
           "overall_verdict": "REJECTED",
-          "ts": "10:30:09"
+          "ts": "11:03:50"
         },
         {
           "step": 9,
@@ -996,9 +998,9 @@
           "amount_paid_usd": 0.00,
           "reservation_released": "res_e732a7a25322",
           "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.00, "available_usd": 15.00, "max_usd": 15.00, "pct_used": 0.0 },
-          "message": "Payment BLOCKED. Escrow released back to treasury. Rogue worker paid $0.00.",
+          "message": "Payment BLOCKED. Escrow reservation released. Rogue worker paid $0.00.",
           "reputation_update": { "worker": "rogue-worker-01", "prior": 0.667, "new": 0.500, "delta": -0.167 },
-          "ts": "10:30:10"
+          "ts": "11:03:51"
         },
         {
           "step": 10,
@@ -1007,28 +1009,29 @@
           "reallocated_to": "code-worker-01",
           "model": "openai/gpt-oss-120b",
           "bid_usd": 0.30,
-          "message": "Autonomous reallocation triggered. Awarding to next highest qualified candidate code-worker-01.",
-          "ts": "10:30:11"
+          "message": "Autonomous reallocation triggered. Awarding to code-worker-01 at $0.30.",
+          "ts": "11:03:52"
         },
         {
           "step": 11,
           "event": "BUDGET_RESERVED",
           "worker_id": "code-worker-01",
           "amount_usd": 0.30,
-          "reservation_id": "res_91d30f8cddbb",
+          "reservation_id": "res_dcfca00b34f6",
           "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.30, "available_usd": 14.70, "max_usd": 15.00, "pct_used": 2.0 },
-          "ts": "10:30:12"
+          "ts": "11:03:53"
         },
         {
           "step": 12,
           "event": "DELIVERY_RECEIVED",
           "worker_id": "code-worker-01",
           "delivery": {
-            "sha256_hash": "2fbb1871a25dbdb1789c676dcbef89d8736a43b2361df894a8274ac439266e7f",
-            "tokens_consumed": 1790,
-            "cost_usd": 0.00184
+            "sha256_hash": "42463941acf1fa2e8db78497cf79296ea158e6dee8de8b20ed22313f6208490f",
+            "tokens_consumed": 1544,
+            "cost_usd": 0.00147,
+            "execution_seconds": 2.99
           },
-          "ts": "10:30:16"
+          "ts": "11:03:54"
         },
         {
           "step": 13,
@@ -1037,30 +1040,29 @@
           "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
           "acceptance": { "verified": true, "details": "5/5 hidden unit tests passed in sandbox (month-end rollover, leap year, clamping)" },
           "overall_verdict": "VERIFIED_APPROVED",
-          "ts": "10:30:17"
+          "ts": "11:03:55"
         },
         {
           "step": 14,
           "event": "PAYOUT_SENT",
           "payout": {
-            "payout_batch_id": "S52G5UD2P2C34",
+            "payout_batch_id": "YMRTQZU3GUNMA",
             "worker_id": "code-worker-01",
             "worker_email": "sb-bef9t53614820@personal.example.com",
             "amount_usd": 0.30,
             "final_status": "PAYOUT_SUCCESS"
           },
           "budget": { "spent_usd": 0.30, "reserved_usd": 0.00, "available_usd": 14.70, "max_usd": 15.00, "pct_used": 2.0 },
-          "ts": "10:30:20"
+          "ts": "11:04:23"
         },
         {
           "step": 15,
           "event": "LEDGER_COMMITTED",
           "worker_id": "code-worker-01",
           "amount_usd": 0.30,
-          "prev_hash": "e3b0c44298fc1c14...",
-          "chain_hash": "a24fa68b94fef405...",
+          "chain_hash": "d59831645b53ee5f...",
           "audit_status": "CRYPTOGRAPHICALLY_VERIFIED",
-          "ts": "10:30:21"
+          "ts": "11:04:24"
         }
       ]
     };
@@ -1084,6 +1086,13 @@
       fetchReputation();
       fetchBudget();
       updateDeadlineUI(12);
+
+      // Dynamically load recorded run from backend if available
+      fetch("/recorded_run").then(r => r.json()).then(data => {
+        if (data && data.events) {
+          RECORDED_RUN = data;
+        }
+      }).catch(() => {});
     });
 
     // ─────────────────────────────────────────────────────────────
@@ -1480,7 +1489,7 @@
         const res = await fetch("/task", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ description: desc, max_budget_usd: budget })
+          body: JSON.stringify({ description: desc, max_budget_usd: budget, force_procure: true })
         });
         const d = await res.json();
         document.getElementById("run-status-badge").innerText = "RUNNING";
@@ -1551,6 +1560,10 @@
       document.getElementById("btn-replay-play").innerText = "▶ Play";
       clearFeed();
       updateBudgetUI({ spent_usd: 0, reserved_usd: 0, available_usd: 15.0, max_usd: 15.0 });
+      document.getElementById("paypal-batch-id").innerText = "—";
+      document.getElementById("paypal-amount").innerText = "—";
+      document.getElementById("paypal-recipient").innerText = "—";
+      document.getElementById("paypal-status-pill").innerText = "IDLE";
       document.getElementById("replay-step-label").innerText = `Step 0 / ${RECORDED_RUN.events.length}: Reset to Genesis`;
       document.querySelectorAll(".p-step").forEach(s => s.className = "p-step");
     }

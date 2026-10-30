@@ -1,11 +1,13 @@
 {
   "title": "Autonomous Code Bounty Procurement & Settlement",
-  "description": "Simulated CI failure triggers autonomous procurement. Rogue worker underbids ($0.18) and is blocked by sandboxed hidden tests ($0.00 paid). Dynamic reallocation to honest worker (code-worker-01) settles via real PayPal Sandbox API.",
+  "description": "Simulated CI failure triggers autonomous procurement. Rogue worker underbids and is blocked by sandboxed hidden tests ($0.00 paid). Dynamic reallocation to honest worker (code-worker-01) settles via real PayPal Sandbox API.",
   "metadata": {
+    "cycle_id": "bounty_1793358223",
     "target_repo": "demo_repos/billing_engine",
-    "bug_type": "Month-end rollover ValueError (Jan 31 -> Feb 28 clamping)",
     "payout_mode": "live",
-    "paypal_batch_id": "S52G5UD2P2C34",
+    "paypal_batch_id": "YMRTQZU3GUNMA",
+    "recipient": "sb-bef9t53614820@personal.example.com",
+    "amount_usd": 0.3,
     "paypal_status": "PAYOUT_SUCCESS",
     "honesty_guarantee": "All adversarial outputs are SCRIPTED ADVERSARIAL FIXTURES; all payouts and Tesseract/LLM inferences are 100% REAL."
   },
@@ -13,211 +15,269 @@
     {
       "step": 1,
       "event": "TASK_RECEIVED",
-      "timestamp": "2026-10-30T10:30:01Z",
-      "cycle_id": "bounty_61d1a44fcaee",
-      "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription",
-      "max_budget_usd": 0.50
+      "timestamp": "2026-10-30T11:03:43.999429+00:00",
+      "cycle_id": "bounty_1793358223",
+      "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription in billing.py",
+      "max_budget_usd": 0.5
     },
     {
       "step": 2,
       "event": "BOTTLENECK_CHECK",
-      "timestamp": "2026-10-30T10:30:02Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:43.999429+00:00",
+      "cycle_id": "bounty_1793358223",
       "bottlenecked": true,
-      "reason": "Host 1-slot execution queue occupied by priority billing cycle proration. Offloading machine labor off-chain.",
-      "executor_status": { "busy": true, "queue_depth": 1 }
+      "reason": "Host 1-slot execution queue occupied by priority billing workload. Procuring external capability.",
+      "executor_status": {
+        "busy": true,
+        "queue_depth": 1
+      }
     },
     {
       "step": 3,
       "event": "JRP_EMITTED",
-      "timestamp": "2026-10-30T10:30:03Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:45.872259+00:00",
+      "cycle_id": "bounty_1793358223",
       "jrp": {
-        "jrp_id": "jrp_bounty_61d1a44fcaee",
+        "jrp_id": "bounty_755d0bdcfd86",
         "task_type": "code_bounty",
-        "task_description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
-        "max_bid_usd": 0.50,
-        "required_capabilities": ["code_generation", "python_debugging"],
-        "has_hidden_tests_leak": false,
-        "isolation_verified": true
+        "task_description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription in billing.py",
+        "repo_path": "C:\\Users\\aarav.SOMEGUYWITHPRET\\PayPal Hackathon\\demo_repos\\billing_engine",
+        "source_code": "\"\"\"\nbilling.py \u2014 Subscription Billing Cycle & Proration Engine\n----------------------------------------------------------\nHandles subscription cycle date offsets and proration accounting.\n\"\"\"\nfrom datetime import datetime\n\n\ndef calculate_next_billing_date(start_date_str: str, interval_months: int = 1) -> str:\n    \"\"\"\n    Calculates the next billing date given an ISO date string (YYYY-MM-DD)\n    and interval in months.\n    \n    Known Defect: Naively creates datetime with dt.day, failing on month-end rollovers\n    (e.g. Jan 31 -> Feb 31 raises ValueError).\n    \"\"\"\n    dt = datetime.strptime(start_date_str, \"%Y-%m-%d\")\n    year = dt.year + (dt.month + interval_months - 1) // 12\n    month = (dt.month + interval_months - 1) % 12 + 1\n    # Defect: day is unconstrained against target month length\n    next_dt = datetime(year, month, dt.day)\n    return next_dt.strftime(\"%Y-%m-%d\")\n\n\ndef prorate_subscription(amount_cents: int, days_active: int, days_in_period: int) -> int:\n    \"\"\"\n    Calculates prorated billing amount in integer cents.\n    \"\"\"\n    # Defect: lacks bounds checking for days_active > days_in_period\n    return int(round((amount_cents * days_active) / days_in_period))\n\n",
+        "public_tests": "\"\"\"\ntests/test_public_billing.py \u2014 Public Test Suite for Billing Engine\n-------------------------------------------------------------------\nThese tests are public and provided to candidate worker agents in the JRP.\n\"\"\"\nimport os\nimport sys\nimport pytest\n\nsys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), \"..\")))\nfrom billing import calculate_next_billing_date, prorate_subscription\n\n\ndef test_standard_monthly_rollover():\n    \"\"\"Standard mid-month rollover within same year.\"\"\"\n    assert calculate_next_billing_date(\"2026-03-15\", 1) == \"2026-04-15\"\n    assert calculate_next_billing_date(\"2026-05-10\", 2) == \"2026-07-10\"\n\n\ndef test_standard_year_boundary():\n    \"\"\"Standard rollover crossing year boundary.\"\"\"\n    assert calculate_next_billing_date(\"2026-11-20\", 3) == \"2027-02-20\"\n\n\ndef test_standard_proration():\n    \"\"\"Standard proration calculation.\"\"\"\n    assert prorate_subscription(1000, 15, 30) == 500\n    assert prorate_subscription(3000, 10, 30) == 1000\n    assert prorate_subscription(5000, 0, 30) == 0\n",
+        "max_bid_usd": 0.5,
+        "required_capabilities": [
+          "code_generation",
+          "python_debugging"
+        ],
+        "policy_approval": {
+          "reason": "Bounty compliant with policy. Within $25.00 cap and under $5.00 threshold.",
+          "proposed_bid_usd": 0.5,
+          "weekly_spent_usd": 0.0,
+          "remaining_cap_usd": 25.0,
+          "weekly_spend_cap_usd": 25.0
+        },
+        "status": "OPEN_FOR_BIDS",
+        "created_at": 1793358225.8722594,
+        "cycle_id": "bounty_1793358223"
       }
     },
     {
       "step": 4,
       "event": "BIDS_RECEIVED",
-      "timestamp": "2026-10-30T10:30:04Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:45.872259+00:00",
+      "cycle_id": "bounty_1793358223",
       "bids": [
         {
           "worker_id": "rogue-worker-01",
           "model": "scripted_adversary_fixture",
           "bid_usd": 0.18,
-          "estimated_seconds": 0.8,
+          "estimated_seconds": 1,
           "reputation_score": 0.667,
-          "allocation_cap_usd": 1.00,
-          "is_adversarial_fixture": true,
-          "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
-          "composite_score": 0.8842
+          "composite_score": 0.8842,
+          "status": "BID",
+          "is_fixture": true,
+          "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
         },
         {
           "worker_id": "code-worker-02",
           "model": "openai/gpt-oss-20b",
           "bid_usd": 0.22,
-          "estimated_seconds": 9.02,
+          "estimated_seconds": 9.0,
+          "measured_latency": 9.02,
           "reputation_score": 0.385,
-          "allocation_cap_usd": 15.00,
-          "composite_score": 0.4117
+          "composite_score": 0.4117,
+          "status": "BID"
         },
         {
           "worker_id": "code-worker-01",
           "model": "openai/gpt-oss-120b",
-          "bid_usd": 0.30,
-          "estimated_seconds": 4.67,
+          "bid_usd": 0.3,
+          "estimated_seconds": 4.5,
+          "measured_latency": 4.67,
           "reputation_score": 0.923,
-          "allocation_cap_usd": 15.00,
-          "composite_score": 0.3931
+          "composite_score": 0.3931,
+          "status": "BID"
         }
       ]
     },
     {
       "step": 5,
       "event": "BID_AWARDED",
-      "timestamp": "2026-10-30T10:30:05Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:45.872259+00:00",
+      "cycle_id": "bounty_1793358223",
       "winner": {
         "worker_id": "rogue-worker-01",
         "bid_usd": 0.18,
-        "model": "scripted_adversary_fixture",
+        "is_fixture": true,
         "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
       },
-      "award_reason": "Lowest price bid under market rate ($0.18 vs $0.22/$0.30)"
+      "award_reason": "Underbid below market rate ($0.18 vs $0.22/$0.30)"
     },
     {
       "step": 6,
       "event": "BUDGET_RESERVED",
-      "timestamp": "2026-10-30T10:30:06Z",
-      "cycle_id": "bounty_61d1a44fcaee",
-      "reservation_id": "res_e732a7a25322",
+      "timestamp": "2026-10-30T11:03:45.921163+00:00",
+      "cycle_id": "bounty_1793358223",
+      "reservation_id": "res_f6103ab85fca",
       "worker_id": "rogue-worker-01",
       "amount_usd": 0.18,
-      "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.18, "available_usd": 14.82, "max_usd": 15.00 }
+      "budget_state": {
+        "cycle_id": "bounty_1793358223",
+        "max_usd": 15.0,
+        "spent_usd": 0.0,
+        "inflight_usd": 0.0,
+        "reserved_usd": 0.18,
+        "available_usd": 14.82,
+        "total_committed_usd": 0.18,
+        "pct_used": 1.2
+      }
     },
     {
       "step": 7,
       "event": "DELIVERY_RECEIVED",
-      "timestamp": "2026-10-30T10:30:08Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:46.072276+00:00",
+      "cycle_id": "bounty_1793358223",
       "worker_id": "rogue-worker-01",
       "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
       "delivery": {
-        "sha256_hash": "a4d81f14c0e66ec32b904944d154dfac3c538a7c2936a251210815147814ad59",
-        "output_preview": "def calculate_next_billing_date(start_date_str, interval_months=1): next_dt = datetime(year, month, dt.day)..."
+        "sha256_hash": "7cf554730ebfbe7f48ebd7fc2396f8d8361d7a99fe8f3beec723dda73422bac1",
+        "output_preview": "# [SCRIPTED ADVERSARIAL FIXTURE] rogue-worker-01\nfrom datetime import datetime\n\ndef calculate_next_billing_date(start_date_str: str, interval_months: int = 1) -> str:\n    \"\"\"Plausible-looking fix that..."
       }
     },
     {
       "step": 8,
       "event": "TWO_STAGE_VERIFICATION",
-      "timestamp": "2026-10-30T10:30:09Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:48.652278+00:00",
+      "cycle_id": "bounty_1793358223",
       "worker_id": "rogue-worker-01",
-      "integrity_stage": { "status": "PASSED", "message": "SHA-256 Digest Match" },
-      "acceptance_stage": {
-        "status": "FAILED",
-        "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month (Jan 31 + 1 month raised Feb 31 instead of Feb 28 clamping)"
+      "integrity": {
+        "match": true,
+        "message": "SHA-256 payload digest verified"
+      },
+      "acceptance": {
+        "verified": false,
+        "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month (Failed: ['test_month_end_january_to_february', 'test_month_end_31_to_30', 'test_leap_year_rollover', 'test_invalid_interval_rejected', 'test_invalid_proration_days_rejected'])"
       },
       "overall_verdict": "REJECTED"
     },
     {
       "step": 9,
       "event": "PAYMENT_BLOCKED",
-      "timestamp": "2026-10-30T10:30:10Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:48.892785+00:00",
+      "cycle_id": "bounty_1793358223",
       "worker_id": "rogue-worker-01",
-      "amount_paid_usd": 0.00,
-      "reservation_released": "res_e732a7a25322",
-      "reputation_update": { "prior": 0.667, "new": 0.500, "delta": -0.167, "rule": "Beta(2,1) update -> Beta(2,2)" },
-      "message": "Payment BLOCKED. Escrow released back to treasury. Rogue worker paid $0.00."
+      "amount_paid_usd": 0.0,
+      "reservation_released": "res_f6103ab85fca",
+      "budget_state": {
+        "cycle_id": "bounty_1793358223",
+        "max_usd": 15.0,
+        "spent_usd": 0.0,
+        "inflight_usd": 0.0,
+        "reserved_usd": 0.0,
+        "available_usd": 15.0,
+        "total_committed_usd": 0.0,
+        "pct_used": 0.0
+      },
+      "reputation_update": {
+        "worker": "rogue-worker-01",
+        "prior": 0.667,
+        "new": 0.5,
+        "delta": -0.167
+      },
+      "message": "Payment BLOCKED. Escrow reservation released. Rogue worker paid $0.00."
     },
     {
       "step": 10,
       "event": "TASK_REALLOCATING",
-      "timestamp": "2026-10-30T10:30:11Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:48.892785+00:00",
+      "cycle_id": "bounty_1793358223",
+      "failed_worker": "rogue-worker-01",
       "reallocated_to": "code-worker-01",
       "model": "openai/gpt-oss-120b",
-      "bid_usd": 0.30,
-      "message": "Autonomous reallocation triggered. Awarding to winning honest worker code-worker-01."
+      "bid_usd": 0.3,
+      "message": "Autonomous reallocation triggered. Awarding to code-worker-01 at $0.30."
     },
     {
       "step": 11,
       "event": "BUDGET_RESERVED",
-      "timestamp": "2026-10-30T10:30:12Z",
-      "cycle_id": "bounty_61d1a44fcaee",
-      "reservation_id": "res_91d30f8cddbb",
+      "timestamp": "2026-10-30T11:03:48.926732+00:00",
+      "cycle_id": "bounty_1793358223",
+      "reservation_id": "res_dcfca00b34f6",
       "worker_id": "code-worker-01",
-      "amount_usd": 0.30,
-      "budget_state": { "spent_usd": 0.00, "reserved_usd": 0.30, "available_usd": 14.70, "max_usd": 15.00 }
+      "amount_usd": 0.3,
+      "budget_state": {
+        "cycle_id": "bounty_1793358223",
+        "max_usd": 15.0,
+        "spent_usd": 0.0,
+        "inflight_usd": 0.0,
+        "reserved_usd": 0.3,
+        "available_usd": 14.7,
+        "total_committed_usd": 0.3,
+        "pct_used": 2.0
+      }
     },
     {
       "step": 12,
       "event": "DELIVERY_RECEIVED",
-      "timestamp": "2026-10-30T10:30:16Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:51.915497+00:00",
+      "cycle_id": "bounty_1793358223",
       "worker_id": "code-worker-01",
       "model": "openai/gpt-oss-120b",
       "delivery": {
-        "sha256_hash": "2fbb1871a25dbdb1789c676dcbef89d8736a43b2361df894a8274ac439266e7f",
-        "tokens_consumed": 1790,
-        "api_cost_usd": 0.00184,
-        "execution_seconds": 3.86
+        "sha256_hash": "42463941acf1fa2e8db78497cf79296ea158e6dee8de8b20ed22313f6208490f",
+        "tokens_consumed": 1544,
+        "cost_usd": 0.00147,
+        "execution_seconds": 2.99
       }
     },
     {
       "step": 13,
       "event": "TWO_STAGE_VERIFICATION",
-      "timestamp": "2026-10-30T10:30:17Z",
-      "cycle_id": "bounty_61d1a44fcaee",
+      "timestamp": "2026-10-30T11:03:54.964977+00:00",
+      "cycle_id": "bounty_1793358223",
       "worker_id": "code-worker-01",
-      "integrity_stage": { "status": "PASSED", "message": "SHA-256 Digest Match" },
-      "acceptance_stage": {
-        "status": "PASSED",
-        "details": [
-          "test_month_end_january_to_february : PASS",
-          "test_month_end_31_to_30            : PASS",
-          "test_leap_year_rollover            : PASS",
-          "test_invalid_interval_rejected     : PASS",
-          "test_invalid_proration_days_rejected : PASS"
-        ]
+      "integrity": {
+        "match": true,
+        "message": "SHA-256 payload digest verified"
+      },
+      "acceptance": {
+        "verified": true,
+        "details": "5/5 hidden unit tests passed in sandbox (month-end rollover, leap year, clamping)"
       },
       "overall_verdict": "VERIFIED_APPROVED"
     },
     {
       "step": 14,
       "event": "PAYOUT_SENT",
-      "timestamp": "2026-10-30T10:30:20Z",
-      "cycle_id": "bounty_61d1a44fcaee",
-      "worker_id": "code-worker-01",
-      "worker_email": "sb-bef9t53614820@personal.example.com",
-      "amount_usd": 0.30,
-      "payout_batch_id": "S52G5UD2P2C34",
-      "status": "PAYOUT_SUCCESS",
-      "budget_state": { "spent_usd": 0.30, "reserved_usd": 0.00, "available_usd": 14.70, "max_usd": 15.00 },
-      "payout_card": {
-        "batch_id": "S52G5UD2P2C34",
-        "recipient": "sb-bef9t53614820@personal.example.com",
-        "amount": "$0.30 USD",
-        "status": "PAYOUT_SUCCESS",
-        "provider": "PayPal Payouts API v1"
+      "timestamp": "2026-10-30T11:04:23.899238+00:00",
+      "cycle_id": "bounty_1793358223",
+      "payout": {
+        "payout_batch_id": "YMRTQZU3GUNMA",
+        "worker_id": "code-worker-01",
+        "worker_email": "sb-bef9t53614820@personal.example.com",
+        "amount_usd": 0.3,
+        "final_status": "PAYOUT_SUCCESS"
+      },
+      "budget": {
+        "cycle_id": "bounty_1793358223",
+        "max_usd": 15.0,
+        "spent_usd": 0.3,
+        "inflight_usd": 0.0,
+        "reserved_usd": 0.0,
+        "available_usd": 14.7,
+        "total_committed_usd": 0.3,
+        "pct_used": 2.0
       }
     },
     {
       "step": 15,
       "event": "LEDGER_COMMITTED",
-      "timestamp": "2026-10-30T10:30:21Z",
-      "cycle_id": "bounty_61d1a44fcaee",
-      "entry_index": 7,
-      "prev_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "chain_hash": "a24fa68b94fef405da010bb1e39a3449339e083c21cb0a8df419a4ad41975b9f",
+      "timestamp": "2026-10-30T11:04:23.928128+00:00",
+      "cycle_id": "bounty_1793358223",
+      "entry_index": 1,
+      "worker_id": "code-worker-01",
+      "amount_usd": 0.3,
+      "chain_hash": "d59831645b53ee5f109bdf15a9ed303874fdd6d090a73af108ba194202fe652e",
       "audit_status": "CRYPTOGRAPHICALLY_VERIFIED"
     }
   ]
