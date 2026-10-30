@@ -24,6 +24,6 @@ with open('audit/latest_chain_hash.txt', 'r', encoding='utf-8') as f:
 print(f"Anchor hash in audit/latest_chain_hash.txt: {anchor}")
 
 # Confirm ledger row hashes
-last_row = con.execute("SELECT entry_index, worker_id, amount_usd, tx_hash, prev_hash FROM ledger ORDER BY entry_index DESC LIMIT 1").fetchone()
+last_row = con.execute("SELECT entry_index, worker_id, bid_usd, chain_hash, prev_hash FROM ledger ORDER BY entry_index DESC LIMIT 1").fetchone()
 print(f"Latest ledger row in DB: {last_row}")
 con.close()
