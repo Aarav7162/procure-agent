@@ -102,3 +102,4 @@ def evaluate_bounty_policy(task_type: str, max_bid_usd: float) -> Tuple[bool, st
         "remaining_cap_usd": remaining_cap,
         "weekly_spend_cap_usd": spend_cap,
     }
+

@@ -28,3 +28,4 @@ def prorate_subscription(amount_cents: int, days_active: int, days_in_period: in
     """
     # Defect: lacks bounds checking for days_active > days_in_period
     return int(round((amount_cents * days_active) / days_in_period))
+

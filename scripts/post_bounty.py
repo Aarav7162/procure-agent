@@ -136,3 +136,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     res = post_bounty_from_ci(args.repo_path, args.task_type, args.max_bid, args.description)
     print(json.dumps(res, indent=2, default=str))
+

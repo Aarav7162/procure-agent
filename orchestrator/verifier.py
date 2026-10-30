@@ -127,39 +127,54 @@ def verify_ocr_cer(reference_text: str, candidate_text: str, max_cer: float = 0.
     return True, f"OCR Hard Check Passed: Character Error Rate ({cer:.2%}) within tolerance", details
 
 
-def verify_code_unit_tests(code_str: str, test_suite_code: str, timeout_sec: float = 3.0) -> Tuple[bool, str, Dict[str, Any]]:
-    """Hard Check: Executes candidate code against hidden unit test suite in an isolated subprocess."""
-    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as f:
-        f.write(code_str + "\n\n" + test_suite_code)
-        temp_path = f.name
+def verify_code_unit_tests(code_str: str, test_suite_code: str, timeout_sec: float = 3.0, module_name: str = "billing") -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Hard Check: Executes candidate code against unit test suite in an isolated subprocess sandbox.
+    Supports modular repository structures (writing candidate code to module_name.py)
+    as well as standalone function snippets.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Write candidate code as module file
+        mod_path = os.path.join(temp_dir, f"{module_name}.py")
+        with open(mod_path, "w", encoding="utf-8") as f:
+            f.write(code_str)
 
-    try:
-        proc = subprocess.run(
-            [sys.executable, temp_path],
-            capture_output=True,
-            text=True,
-            timeout=timeout_sec,
-        )
-        passed = (proc.returncode == 0)
-        details = {
-            "exit_code": proc.returncode,
-            "stdout": proc.stdout[:500],
-            "stderr": proc.stderr[:500],
-        }
-        if not passed:
-            err_msg = proc.stderr.strip() or proc.stdout.strip() or f"Exited with code {proc.returncode}"
-            return False, f"Code Hard Check Failed: Hidden unit tests failed: {err_msg}", details
-        return True, "Code Hard Check Passed: All hidden unit tests passed successfully", details
-    except subprocess.TimeoutExpired:
-        return False, f"Code Hard Check Failed: Execution timed out after {timeout_sec}s", {"timeout": True}
-    except Exception as e:
-        return False, f"Code Hard Check Failed: Subprocess error: {e}", {"error": str(e)}
-    finally:
-        if os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except Exception:
-                pass
+        # Write test runner script
+        runner_path = os.path.join(temp_dir, "test_runner.py")
+        with open(runner_path, "w", encoding="utf-8") as f:
+            f.write("import sys, os\n")
+            f.write("sys.path.insert(0, os.path.abspath('.'))\n")
+            # Expose symbols directly in case test suite doesn't have imports
+            f.write(f"try:\n    from {module_name} import *\nexcept Exception:\n    pass\n\n")
+            f.write(test_suite_code + "\n\n")
+            # Auto-execute test_* functions if defined pytest-style
+            f.write("if __name__ == '__main__':\n")
+            f.write("    for name, obj in list(globals().items()):\n")
+            f.write("        if name.startswith('test_') and callable(obj):\n")
+            f.write("            obj()\n")
+
+        try:
+            proc = subprocess.run(
+                [sys.executable, runner_path],
+                cwd=temp_dir,
+                capture_output=True,
+                text=True,
+                timeout=timeout_sec,
+            )
+            passed = (proc.returncode == 0)
+            details = {
+                "exit_code": proc.returncode,
+                "stdout": proc.stdout[:500],
+                "stderr": proc.stderr[:500],
+            }
+            if not passed:
+                err_msg = proc.stderr.strip() or proc.stdout.strip() or f"Exited with code {proc.returncode}"
+                return False, f"Code Hard Check Failed: Hidden unit tests failed: {err_msg}", details
+            return True, "Code Hard Check Passed: All hidden unit tests passed successfully", details
+        except subprocess.TimeoutExpired:
+            return False, f"Code Hard Check Failed: Execution timed out after {timeout_sec}s", {"timeout": True}
+        except Exception as e:
+            return False, f"Code Hard Check Failed: Subprocess error: {e}", {"error": str(e)}
 
 
 def verify_citations(citations: List[str], required_keywords: Optional[List[str]] = None) -> Tuple[bool, str, Dict[str, Any]]:

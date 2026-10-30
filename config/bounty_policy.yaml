@@ -9,3 +9,4 @@ allowed_task_types:
   - "llm_synthesis"
 
 approval_threshold_usd: 5.00
+
