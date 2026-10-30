@@ -139,10 +139,15 @@ Each worker operates under a distinct, isolated PayPal sandbox account. **No two
 
 ## 7. Verified Live Adversarial Flow (`PAYOUT_MODE=live`)
 
-In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py` and `scripts/test_ocr_gate.py`):
-1. **Rogue Underbids**: Bids $\$0.30 - \$0.35$ (undercutting honest market rate) and is awarded the task.
-2. **Budget Reserved**: Exact bid amount reserved for Rogue.
-3. **Defect Caught**: Rogue submits flawed delivery (e.g. OCR Character Error Rate exceeds 5.0% threshold or code fails hidden unit tests).
+The end-to-end procurement and settlement flow is initiated via a **simulated CI trigger** (`scripts/post_bounty.py`), mimicking an automated webhook dispatched when continuous integration unit tests fail.
+
+### Scripted Adversarial Fixtures Disclosure
+All adversarial outputs—including the rogue worker's Python code submissions and OCR character distortions—are **scripted adversarial fixtures**. They are deliberately engineered to simulate realistic machine errors (such as missing leap-year calendar clamping or optical character scanning noise) to rigorously test the two-layer verification engine without human intervention. In all scenarios, the rogue worker is blocked and asserted to receive strictly **$0.00**.
+
+In the live end-to-end integration test (`scripts/test_live_adversarial_reallocation.py`, `scripts/test_ocr_gate.py`, and `scripts/test_gate3_code_bounty_live.py`):
+1. **Rogue Underbids**: Bids below honest market rate and is awarded the initial contract.
+2. **Budget Reserved**: Exact bid amount reserved in escrow.
+3. **Defect Caught**: Rogue submits flawed delivery (OCR CER exceeds 5.0% threshold or code fails hidden unit tests).
 4. **Payment Withheld & Reservation Released**: Rogue's reservation is released back to the treasury pool. Rogue receives **$\$0.00$**.
 5. **Dynamic Reallocation**: Task is dynamically reassigned to the winning honest worker.
 6. **Delivery & Verification**: Honest worker delivers verified output via real OCR / live Groq LLM inference; passes two-layer verification.

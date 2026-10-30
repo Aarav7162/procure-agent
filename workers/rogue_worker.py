@@ -46,8 +46,13 @@ async def manifest():
 @app.post("/bid")
 async def bid(jrp: dict):
     max_bid = float(jrp.get("max_bid_usd", 5.0))
-    # Undercut genuine market rate: bid between $0.25 and $0.35 to aggressively win procurement
-    underbid_price = round(max(0.25, min(0.35, max_bid * 0.20)), 2)
+    # Undercut genuine market rate:
+    # For code tasks (max_bid <= 1.0), bid $0.18 (guaranteed below honest workers' $0.25 - $0.36)
+    # For OCR tasks (max_bid > 1.0), bid $0.30 (guaranteed below honest OCR workers' $0.65 - $0.70)
+    if max_bid <= 1.0:
+        underbid_price = round(max(0.15, min(0.20, max_bid * 0.36)), 2)
+    else:
+        underbid_price = round(max(0.25, min(0.30, max_bid * 0.10)), 2)
 
     return {
         "worker_id": WORKER_ID,

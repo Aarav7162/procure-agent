@@ -55,16 +55,19 @@ async def bid(jrp: dict):
         return {"worker_id": WORKER_ID, "status": "DECLINED", "reason": "Task does not match Python coding capabilities"}
 
     task_desc = jrp.get("task_description", "")
-    est_in = estimate_tokens(task_desc)
-    est_out = 250  # Average expected Python function output
+    source_code = jrp.get("source_code", "")
+    public_tests = jrp.get("public_tests", "")
+    full_text = f"{task_desc}\n{source_code}\n{public_tests}"
+    est_in = estimate_tokens(full_text)
+    est_out = 350  # Average expected Python module output
 
     # EXPLAINABLE MARGIN RULE:
     #   Raw API Token Cost:     C_api = (est_in * P_in + est_out * P_out)
     #   Compute Risk Multiplier: M = 1.25 (25% buffer for token variance and network latency)
-    #   Minimum Operational Fee: F_min = $0.20 (agent availability readiness, sandbox maintenance)
+    #   Minimum Operational Fee: F_min = $0.35 (high-capacity 120B model uptime, deep reasoning sandbox)
     #   Bid Formula:            Bid = min(max_bid, round(max(F_min, (C_api * M) + F_min), 2))
     raw_cost = GLOBAL_API_METER.calculate_cost(GROQ_MODEL, est_in, est_out)
-    bid_price = max(0.20, round(raw_cost * 1.25 + 0.20, 2))
+    bid_price = max(0.35, round(raw_cost * 1.25 + 0.35, 2))
 
     max_bid = float(jrp.get("max_bid_usd", 5.0))
     if bid_price > max_bid:
@@ -74,9 +77,10 @@ async def bid(jrp: dict):
         "worker_id": WORKER_ID,
         "status": "BID",
         "bid_usd": bid_price,
-        "estimated_seconds": 2.0,
+        "estimated_seconds": 3.5,
         "estimated_tokens": est_in + est_out,
-        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.20 fee = ${bid_price:.2f}",
+        "model": GROQ_MODEL,
+        "pricing_explanation": f"raw_cost(${raw_cost:.5f}) * 1.25 + $0.35 fee = ${bid_price:.2f}",
         "capability_proof": [f"groq-{GROQ_MODEL}", "ast-syntax-verified"],
         "reputation_score": 0.98,
         "worker_paypal_email": CODE_WORKER_PAYPAL_EMAIL,
