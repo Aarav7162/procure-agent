@@ -56,8 +56,31 @@ def init_reputation_schema():
 def get_worker_reputation(worker_id: str) -> Dict[str, Any]:
     """
     Retrieves the Bayesian reputation score and allocation status for a worker.
-    Defaults to Beta(2,1) prior if no history exists.
+    Sourced primarily from audit/run_log.jsonl. Defaults to Beta(2,1) prior if no history exists.
     """
+    # 1. Attempt lookup from unified run log
+    try:
+        from audit.run_log import compute_worker_metrics_from_log
+        log_m = compute_worker_metrics_from_log(worker_id)
+        if log_m["n_samples"] > 0:
+            return {
+                "worker_id": worker_id,
+                "alpha": log_m["alpha"],
+                "beta": log_m["beta"],
+                "successes": log_m["passes"],
+                "failures": log_m["failures"],
+                "total_attempts": log_m["n_samples"],
+                "n_samples": log_m["n_samples"],
+                "reputation_score": log_m["reputation_score"],
+                "avg_latency_all": log_m["avg_latency_all"],
+                "avg_latency_recent_10": log_m["avg_latency_recent_10"],
+                "is_cold_start": log_m["is_cold_start"],
+                "allocation_cap_usd": log_m["allocation_cap_usd"],
+            }
+    except Exception:
+        pass
+
+    # 2. Fallback to SQLite table
     init_reputation_schema()
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
@@ -86,6 +109,7 @@ def get_worker_reputation(worker_id: str) -> Dict[str, Any]:
         "successes": successes,
         "failures": failures,
         "total_attempts": total_attempts,
+        "n_samples": total_attempts,
         "reputation_score": round(score, 4),
         "is_cold_start": is_cold_start,
         "allocation_cap_usd": allocation_cap,
@@ -131,6 +155,21 @@ def record_worker_outcome(worker_id: str, success: bool, task_id: str, notes: st
 
     conn.commit()
     conn.close()
+
+    try:
+        from audit.run_log import append_run_log
+        append_run_log(
+            worker_id=worker_id,
+            model="openai/gpt-oss-120b" if "code-worker-01" in worker_id else ("openai/gpt-oss-20b" if "code-worker-02" in worker_id else "scripted-fixture"),
+            pass_fail="PASS" if success else "FAIL",
+            latency=0.0,
+            token_cost=0.0,
+            source_script="orchestrator/reputation.py:record_worker_outcome",
+            timestamp=now_iso,
+            notes=f"task_id={task_id} notes={notes}"
+        )
+    except Exception:
+        pass
 
     total_attempts = new_successes + new_failures
     is_cold_start = (total_attempts < COLD_START_ATTEMPTS_THRESHOLD)

@@ -54,13 +54,24 @@ async def bid(jrp: dict):
     else:
         underbid_price = round(max(0.25, min(0.30, max_bid * 0.10)), 2)
 
+    try:
+        from orchestrator.reputation import get_worker_reputation
+        rep = get_worker_reputation(WORKER_ID)
+        rep_score = rep["reputation_score"]
+        n_samples = rep.get("n_samples", 0)
+    except Exception:
+        rep_score = 0.6667
+        n_samples = 0
+
     return {
         "worker_id": WORKER_ID,
         "status": "BID",
         "bid_usd": underbid_price,
         "estimated_seconds": 1,
+        "measured_latency": 1.00,
+        "sample_size_n": n_samples,
         "capability_proof": ["fast-execution-v2", "plausible-output-gen"],
-        "reputation_score": 0.50,
+        "reputation_score": rep_score,
         "worker_paypal_email": ROGUE_PAYPAL_EMAIL,
         "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
     }

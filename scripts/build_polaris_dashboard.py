@@ -1,3 +1,4 @@
+import json
 # scripts/build_polaris_dashboard.py
 """
 Generates the pixel-perfect Polaris Command Centre dashboard with:
@@ -1470,7 +1471,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
 
               <div class="gauge-legend-row">
                 <div>Settled: <span id="metric-spent" class="legend-val">$0.00</span></div>
-                <div>Escrow Locked: <span id="metric-reserved" class="legend-val">$0.00</span></div>
+                <div>Budget Reserved: <span id="metric-reserved" class="legend-val">$0.00</span></div>
                 <div>Hard Cap: <span id="metric-max" class="legend-val">$15.00</span></div>
               </div>
             </div>
@@ -1479,7 +1480,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
             <div class="pipeline-strip" id="card-pipeline">
               <div id="step-jrp" class="p-step">1. JRP Emitted</div>
               <div id="step-bids" class="p-step">2. Multi-Bid</div>
-              <div id="step-escrow" class="p-step">3. Escrow Lock</div>
+              <div id="step-escrow" class="p-step">3. Budget Reservation</div>
               <div id="step-delivery" class="p-step">4. Delivery</div>
               <div id="step-verify1" class="p-step">5. Integrity</div>
               <div id="step-verify2" class="p-step">6. Acceptance</div>
@@ -1548,21 +1549,22 @@ HTML_CONTENT = r'''<!DOCTYPE html>
                   <thead>
                     <tr>
                       <th>Worker</th>
+                      <th>Runs (N)</th>
                       <th>Beta Params</th>
                       <th>Score</th>
                     </tr>
                   </thead>
                   <tbody id="rep-body">
-                    <tr><td colspan="3" style="text-align: center; color: var(--theme-text-muted);">Loading Bayesian distribution...</td></tr>
+                    <tr><td colspan="4" style="text-align: center; color: var(--theme-text-muted);">Loading Bayesian distribution...</td></tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <!-- Cryptographic SHA-256 Ledger -->
+            <!-- Tamper-Evident SHA-256 Ledger -->
             <div class="matrix-card" id="card-ledger">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span class="section-title">Cryptographic SHA-256 Ledger</span>
+                <span class="section-title">Tamper-Evident SHA-256 Ledger</span>
                 <button onclick="verifyLedgerChain()" style="padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); border: 1px solid var(--theme-border); color: #fff; font-size: 10px; cursor: pointer;">Verify Proof</button>
               </div>
               <table class="table-custom">
@@ -1613,227 +1615,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
     // ─────────────────────────────────────────────────────────────
     // RECORDED RUN (OFFLINE ZERO-API-KEY FALLBACK)
     // ─────────────────────────────────────────────────────────────
-    let RECORDED_RUN = {
-      "title": "Autonomous Code Bounty Procurement & Settlement",
-      "description": "Simulated CI failure triggers autonomous procurement. Rogue worker underbids and is blocked by sandboxed hidden tests ($0.00 paid). Dynamic reallocation to honest worker (code-worker-01) settles via real PayPal Sandbox API.",
-      "metadata": {
-            "cycle_id": "bounty_1793358223",
-            "target_repo": "demo_repos/billing_engine",
-            "payout_mode": "live",
-            "paypal_batch_id": "YMRTQZU3GUNMA",
-            "recipient": "sb-bef9t53614820@personal.example.com",
-            "amount_usd": 0.3,
-            "paypal_status": "PAYOUT_SUCCESS",
-            "honesty_guarantee": "All adversarial outputs are SCRIPTED ADVERSARIAL FIXTURES; all payouts and Tesseract/LLM inferences are 100% REAL.",
-            "recorded_date": "2026-10-30",
-            "recorded_from_live_run": true,
-            "run_type": "adversarial_rogue_rejection"
-      },
-      "events": [
-            {
-                  "step": 1,
-                  "event": "TASK_RECEIVED",
-                  "timestamp": "2026-10-30T11:03:43.999429+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "description": "Fix month-end rollover ValueError in calculate_next_billing_date and bounds checking in prorate_subscription in billing.py",
-                  "max_budget_usd": 0.5
-            },
-            {
-                  "step": 2,
-                  "event": "BOTTLENECK_CHECK",
-                  "timestamp": "2026-10-30T11:03:43.999429+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "bottlenecked": true,
-                  "reason": "Host 1-slot execution queue occupied by priority billing workload. Procuring external capability.",
-                  "executor_status": {
-                        "busy": true,
-                        "queue_depth": 1
-                  }
-            },
-            {
-                  "step": 3,
-                  "event": "JRP_EMITTED",
-                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "jrp": {
-                        "jrp_id": "bounty_755d0bdcfd86",
-                        "task_type": "code_bounty",
-                        "task_description": "Fix month-end rollover ValueError in calculate_next_billing_date in billing.py",
-                        "max_bid_usd": 0.5,
-                        "required_capabilities": ["code_generation", "python_debugging"],
-                        "status": "OPEN_FOR_BIDS"
-                  }
-            },
-            {
-                  "step": 4,
-                  "event": "BIDS_RECEIVED",
-                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "bids": [
-                        {
-                              "worker_id": "rogue-worker-01",
-                              "model": "scripted_adversary_fixture",
-                              "bid_usd": 0.18,
-                              "estimated_seconds": 1,
-                              "reputation_score": 0.667,
-                              "composite_score": 0.8842,
-                              "status": "BID",
-                              "is_fixture": true,
-                              "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
-                        },
-                        {
-                              "worker_id": "code-worker-02",
-                              "model": "openai/gpt-oss-20b",
-                              "bid_usd": 0.22,
-                              "estimated_seconds": 9.0,
-                              "measured_latency": 9.02,
-                              "reputation_score": 0.385,
-                              "composite_score": 0.4117,
-                              "status": "BID"
-                        },
-                        {
-                              "worker_id": "code-worker-01",
-                              "model": "openai/gpt-oss-120b",
-                              "bid_usd": 0.3,
-                              "estimated_seconds": 4.5,
-                              "measured_latency": 4.67,
-                              "reputation_score": 0.923,
-                              "composite_score": 0.3931,
-                              "status": "BID"
-                        }
-                  ]
-            },
-            {
-                  "step": 5,
-                  "event": "BID_AWARDED",
-                  "timestamp": "2026-10-30T11:03:45.872259+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "winner": {
-                        "worker_id": "rogue-worker-01",
-                        "bid_usd": 0.18,
-                        "is_fixture": true,
-                        "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE"
-                  },
-                  "award_reason": "Underbid below market rate ($0.18 vs $0.22/$0.30)"
-            },
-            {
-                  "step": 6,
-                  "event": "BUDGET_RESERVED",
-                  "timestamp": "2026-10-30T11:03:45.921163+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "reservation_id": "res_f6103ab85fca",
-                  "worker_id": "rogue-worker-01",
-                  "amount_usd": 0.18,
-                  "budget_state": {
-                        "max_usd": 15.0,
-                        "spent_usd": 0.0,
-                        "reserved_usd": 0.18,
-                        "available_usd": 14.82
-                  }
-            },
-            {
-                  "step": 7,
-                  "event": "DELIVERY_RECEIVED",
-                  "timestamp": "2026-10-30T11:03:46.072276+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "worker_id": "rogue-worker-01",
-                  "fixture_label": "SCRIPTED_ADVERSARIAL_FIXTURE",
-                  "delivery": {
-                        "sha256_hash": "7cf554730ebfbe7f48ebd7fc2396f8d8361d7a99fe8f3beec723dda73422bac1"
-                  }
-            },
-            {
-                  "step": 8,
-                  "event": "TWO_STAGE_VERIFICATION",
-                  "timestamp": "2026-10-30T11:03:48.652278+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "worker_id": "rogue-worker-01",
-                  "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
-                  "acceptance": {
-                        "verified": false,
-                        "reason": "Hidden unit tests failed in sandboxed subprocess: ValueError: day is out of range for month"
-                  },
-                  "overall_verdict": "REJECTED"
-            },
-            {
-                  "step": 9,
-                  "event": "PAYMENT_BLOCKED",
-                  "timestamp": "2026-10-30T11:03:48.892785+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "worker_id": "rogue-worker-01",
-                  "amount_paid_usd": 0.0,
-                  "reservation_released": "res_f6103ab85fca",
-                  "message": "Payment BLOCKED. Escrow reservation released. Rogue worker paid $0.00."
-            },
-            {
-                  "step": 10,
-                  "event": "TASK_REALLOCATING",
-                  "timestamp": "2026-10-30T11:03:48.892785+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "failed_worker": "rogue-worker-01",
-                  "reallocated_to": "code-worker-01",
-                  "model": "openai/gpt-oss-120b",
-                  "bid_usd": 0.3,
-                  "message": "Autonomous reallocation triggered. Awarding to code-worker-01 at $0.30."
-            },
-            {
-                  "step": 11,
-                  "event": "BUDGET_RESERVED",
-                  "timestamp": "2026-10-30T11:03:48.926732+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "reservation_id": "res_dcfca00b34f6",
-                  "worker_id": "code-worker-01",
-                  "amount_usd": 0.3,
-                  "budget_state": { "max_usd": 15.0, "spent_usd": 0.0, "reserved_usd": 0.3, "available_usd": 14.7 }
-            },
-            {
-                  "step": 12,
-                  "event": "DELIVERY_RECEIVED",
-                  "timestamp": "2026-10-30T11:03:51.915497+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "worker_id": "code-worker-01",
-                  "model": "openai/gpt-oss-120b",
-                  "delivery": { "sha256_hash": "42463941acf1fa2e8db78497cf79296ea158e6dee8de8b20ed22313f6208490f" }
-            },
-            {
-                  "step": 13,
-                  "event": "TWO_STAGE_VERIFICATION",
-                  "timestamp": "2026-10-30T11:03:54.964977+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "worker_id": "code-worker-01",
-                  "integrity": { "match": true, "message": "SHA-256 payload digest verified" },
-                  "acceptance": {
-                        "verified": true,
-                        "details": "5/5 hidden unit tests passed in sandbox"
-                  },
-                  "overall_verdict": "VERIFIED_APPROVED"
-            },
-            {
-                  "step": 14,
-                  "event": "PAYOUT_SENT",
-                  "timestamp": "2026-10-30T11:04:23.899238+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "payout": {
-                        "payout_batch_id": "YMRTQZU3GUNMA",
-                        "worker_id": "code-worker-01",
-                        "worker_email": "sb-bef9t53614820@personal.example.com",
-                        "amount_usd": 0.3,
-                        "final_status": "PAYOUT_SUCCESS"
-                  },
-                  "budget": { "max_usd": 15.0, "spent_usd": 0.3, "reserved_usd": 0.0, "available_usd": 14.7 }
-            },
-            {
-                  "step": 15,
-                  "event": "LEDGER_COMMITTED",
-                  "timestamp": "2026-10-30T11:04:23.928128+00:00",
-                  "cycle_id": "bounty_1793358223",
-                  "entry_index": 1,
-                  "worker_id": "code-worker-01",
-                  "amount_usd": 0.3,
-                  "chain_hash": "d59831645b53ee5f109bdf15a9ed303874fdd6d090a73af108ba194202fe652e"
-            }
-      ]
-    };
+    let RECORDED_RUN = __RECORDED_RUN_PLACEHOLDER__;
 
     let CURRENT_MODE = "live";
     let REPLAY_STEP = 0;
@@ -2014,7 +1796,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
         html = `<div>Awarded to <b>${escapeHtml(w.worker_id)}</b> for <b>$${Number(w.bid_usd).toFixed(2)}</b></div>
                 <div style="font-size: 11px; color: var(--theme-text-muted);">${escapeHtml(ev.award_reason || 'Selected based on composite scoring')}</div>`;
       } else if (type === "BUDGET_RESERVED") {
-        html = `<div>Atomic Escrow Lock: <b>$${Number(ev.amount_usd || 0).toFixed(2)}</b> for <b>${escapeHtml(ev.worker_id)}</b></div>
+        html = `<div>Internal Budget Reservation: <b>$${Number(ev.amount_usd || 0).toFixed(2)}</b> for <b>${escapeHtml(ev.worker_id)}</b></div>
                 <div style="font-size: 10px; color: var(--theme-text-muted); font-family: 'JetBrains Mono', monospace;">Res ID: ${escapeHtml(ev.reservation_id || '')} (SQLite BEGIN IMMEDIATE)</div>`;
       } else if (type === "DELIVERY_RECEIVED") {
         const d = ev.delivery || {};
@@ -2032,7 +1814,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
       } else if (type === "PAYMENT_BLOCKED") {
         html = `<div style="color: var(--hazard-critical); font-weight: 700;">PAYMENT WITHHELD — ZERO TRUST ENFORCED</div>
                 <div>${escapeHtml(ev.message || ev.reason || 'Payment withheld')}</div>
-                <div style="font-size: 10px; color: #fca5a5; margin-top: 3px;">Escrow reservation released: $0.00 transferred. Bayesian penalty applied.</div>`;
+                <div style="font-size: 10px; color: #fca5a5; margin-top: 3px;">Internal budget reservation released: $0.00 transferred. Bayesian penalty applied.</div>`;
       } else if (type === "TASK_REALLOCATING") {
         html = `<div style="color: #fbbf24; font-weight: 700;">AUTONOMOUS REALLOCATION</div>
                 <div>${escapeHtml(ev.message || ev.reason || '')}</div>`;
@@ -2048,7 +1830,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
                 <div style="font-size: 11px; color: var(--success-color); margin-top: 3px;">Proof of $0.00 spent: No funds locked or released.</div>`;
       } else if (type === "LEDGER_COMMITTED") {
         html = `<div>SHA-256 Ledger Block Committed: <code>${(ev.tx_hash || ev.chain_hash || '').substring(0, 16)}...</code></div>
-                <div style="font-size: 10px; color: var(--success-color);">Cryptographic chain intact</div>`;
+                <div style="font-size: 10px; color: var(--success-color);">Hash chain intact</div>`;
       } else {
         html = `<div>${escapeHtml(JSON.stringify(ev))}</div>`;
       }
@@ -2077,7 +1859,7 @@ HTML_CONTENT = r'''<!DOCTYPE html>
       } else if (eventType === "BUDGET_RESERVED") {
         document.getElementById("step-bids").className = "p-step completed";
         document.getElementById("step-escrow").className = "p-step active";
-        statusBadge.innerText = "ESCROW LOCKED";
+        statusBadge.innerText = "BUDGET RESERVED";
       } else if (eventType === "DELIVERY_RECEIVED") {
         document.getElementById("step-escrow").className = "p-step completed";
         document.getElementById("step-delivery").className = "p-step active";
@@ -2270,17 +2052,17 @@ HTML_CONTENT = r'''<!DOCTYPE html>
 
     async function verifyLedgerChain() {
       const badge = document.getElementById("verify-badge");
-      badge.innerHTML = `<span style="color: #38bdf8;">Verifying cryptographic SHA-256 links...</span>`;
+      badge.innerHTML = `<span style="color: #38bdf8;">Verifying hash-chained SHA-256 links...</span>`;
 
       try {
         const res = await fetch("/ledger/verify");
         const d = await res.json();
         if (d.valid) {
           badge.innerHTML = `<span class="badge badge-success">✓ SHA-256 Chain Intact (${d.tx_count || 1} Blocks Verified)</span>`;
-          showToast(`Ledger Proof Verified: ${d.tx_count || 1} blocks cryptographically linked.`);
+          showToast(`Ledger Proof Verified: ${d.tx_count || 1} blocks hash-chained and verified.`);
         } else {
           badge.innerHTML = `<span class="badge badge-error">✗ Tamper Detected: Hash mismatch!</span>`;
-          showToast("Warning: Cryptographic ledger verification failed!");
+          showToast("Warning: Ledger chain verification failed!");
         }
       } catch (err) {
         badge.innerHTML = `<span class="badge badge-error">Ledger check error: ${escapeHtml(err.message)}</span>`;
@@ -2300,11 +2082,13 @@ HTML_CONTENT = r'''<!DOCTYPE html>
           const isFixture = r.worker_id.includes("rogue");
           const color = isFixture ? "var(--hazard-critical)" : (score >= 0.7 ? "var(--success-color)" : "var(--theme-text)");
 
+          const nRuns = parseInt(r.n_samples ?? r.total_attempts ?? 0);
           return `
             <tr>
               <td>${isFixture ? `<span style="color: #fbbf24;">${escapeHtml(r.worker_id)}</span> [FIXTURE]` : escapeHtml(r.worker_id)}</td>
+              <td><span style="font-family: var(--font-mono); font-size: 11px; color: var(--theme-text-muted);">N=${nRuns}</span></td>
               <td>Beta(${parseFloat(r.alpha).toFixed(1)}, ${parseFloat(r.beta).toFixed(1)})</td>
-              <td><span style="color: ${color}; font-weight: 700;">${score.toFixed(3)}</span></td>
+              <td><span style="color: ${color}; font-weight: 700;">${score.toFixed(4)}</span></td>
             </tr>
           `;
         }).join("");
@@ -2767,11 +2551,20 @@ HTML_CONTENT = r'''<!DOCTYPE html>
 '''
 
 def main():
-    target_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard", "index.html")
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    demo_run_path = os.path.join(root_dir, "demo", "recorded_runs", "recorded_rogue_run.json")
+    with open(demo_run_path, "r", encoding="utf-8") as f:
+        recorded_data = json.load(f)
+    recorded_json = json.dumps(recorded_data, indent=2)
+
+    final_html = HTML_CONTENT.replace("__RECORDED_RUN_PLACEHOLDER__", recorded_json)
+
+    target_path = os.path.join(root_dir, "dashboard", "index.html")
     with open(target_path, "w", encoding="utf-8") as f:
-        f.write(HTML_CONTENT)
+        f.write(final_html)
     print(f"[OK] Successfully built Polaris Command Centre at: {target_path}")
-    print(f"     Total bytes: {len(HTML_CONTENT)}")
+    print(f"     Embedded recorded run directly from {demo_run_path} ({len(recorded_data.get('events', []))} events)")
+    print(f"     Total bytes: {len(final_html)}")
 
 if __name__ == "__main__":
     main()

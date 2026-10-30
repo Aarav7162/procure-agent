@@ -202,6 +202,22 @@ def run_clean_clone_test():
             live_log.close()
             print("      Live mode verified cleanly.")
 
+            # Step 8b: Execute full live code bounty in clone & assert PayPal batch ID + status
+            print("  [9b] Executing full live code bounty in clone & asserting PayPal payout batch ID...")
+            bounty_run = subprocess.run(
+                [py_exe, "scripts/test_gate3_code_bounty_live.py"],
+                cwd=temp_dir,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            print(f"      Code bounty exit code: {bounty_run.returncode}")
+            assert bounty_run.returncode == 0, f"Gate 3 code bounty failed in clone:\n{bounty_run.stdout}\n{bounty_run.stderr}"
+            assert "PAYOUT_SUCCESS" in bounty_run.stdout, "Live PayPal payout status PAYOUT_SUCCESS not found in output!"
+            assert "Batch ID:" in bounty_run.stdout or "batch_id" in bounty_run.stdout, "PayPal batch ID not asserted in stdout!"
+            print("      Full live code bounty passed with verified PayPal batch ID and PAYOUT_SUCCESS status.")
+
         # Step 9: Automatic Tesseract path verification
         print("  [10] Verifying automatic Tesseract path detection...")
         ocr_check = subprocess.run(
@@ -212,6 +228,31 @@ def run_clean_clone_test():
         )
         print(f"      {ocr_check.stdout.strip()}")
         assert "None" not in ocr_check.stdout, "Tesseract was not automatically detected!"
+
+        # Step 10: Graceful degradation without Tesseract
+        print("  [11] Verifying graceful degradation without Tesseract...")
+        no_tess_env = env.copy()
+        no_tess_env["SIMULATE_NO_TESSERACT"] = "1"
+        deg_check = subprocess.run(
+            [py_exe, "-c", "import asyncio; from workers.ocr_worker import TESSERACT_BIN, bid; print('BIN:', TESSERACT_BIN); b = asyncio.run(bid({'required_capabilities': ['document_ocr']})); print('Status:', b['status']); assert b['status'] == 'DECLINED'"],
+            cwd=temp_dir,
+            env=no_tess_env,
+            capture_output=True,
+            text=True
+        )
+        print(f"      OCR without Tesseract output: {deg_check.stdout.strip()}")
+        assert deg_check.returncode == 0, f"OCR graceful degradation test failed:\n{deg_check.stderr}"
+
+        # Verify code bounty still works without Tesseract
+        code_check = subprocess.run(
+            [py_exe, "scripts/test_gate1_policy_and_repo.py"],
+            cwd=temp_dir,
+            env=no_tess_env,
+            capture_output=True,
+            text=True
+        )
+        assert code_check.returncode == 0, "Code bounty failed when Tesseract is missing!"
+        print("      Code bounty verified to work independently without Tesseract.")
 
         print("\n" + "=" * 80)
         print("DELIVERABLE E CLEAN CLONE TEST: 100% SUCCESSFUL")

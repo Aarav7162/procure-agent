@@ -31,6 +31,9 @@ def score_bids(bids: list[dict]) -> list[dict]:
         b["reputation_score"] = rep["reputation_score"]
         b["allocation_cap_usd"] = rep["allocation_cap_usd"]
         b["is_cold_start"] = rep["is_cold_start"]
+        b["sample_size_n"] = rep.get("n_samples", 0)
+        if "avg_latency_recent_10" in rep and rep["avg_latency_recent_10"] > 0:
+            b["measured_latency"] = rep["avg_latency_recent_10"]
 
         # Enforce cold-start allocation cap
         if b.get("bid_usd", 0.0) > rep["allocation_cap_usd"]:

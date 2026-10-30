@@ -30,7 +30,10 @@ POSSIBLE_TESSERACT_PATHS = [
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
     r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
 ]
-TESSERACT_BIN = next((p for p in POSSIBLE_TESSERACT_PATHS if p and os.path.exists(p)), None)
+if os.getenv("DISABLE_TESSERACT", "0") == "1" or os.getenv("SIMULATE_NO_TESSERACT", "0") == "1":
+    TESSERACT_BIN = None
+else:
+    TESSERACT_BIN = next((p for p in POSSIBLE_TESSERACT_PATHS if p and os.path.exists(p)), None)
 
 
 def get_pytesseract():
@@ -65,18 +68,31 @@ async def bid(jrp: dict):
     if not any(c in ["document_ocr", "text_extraction", "receipt_transcription", "tesseract", "ocr"] for c in req_caps):
         return {"worker_id": WORKER_ID, "status": "DECLINED", "reason": "Task does not match OCR capabilities"}
 
+    if not TESSERACT_BIN:
+        return {"worker_id": WORKER_ID, "status": "DECLINED", "reason": "Tesseract binary not installed on host"}
+
     max_bid = float(jrp.get("max_bid_usd", 5.0))
     # Pricing based on compute seconds: $0.20 base fee + $0.50 compute
     bid_price = min(max_bid, 0.70)
+
+    try:
+        from orchestrator.reputation import get_worker_reputation
+        rep = get_worker_reputation(WORKER_ID)
+        rep_score = rep["reputation_score"]
+        n_samples = rep.get("n_samples", 0)
+    except Exception:
+        rep_score = 0.6667
+        n_samples = 0
 
     return {
         "worker_id": WORKER_ID,
         "status": "BID",
         "bid_usd": bid_price,
         "estimated_seconds": 2.0,
+        "sample_size_n": n_samples,
         "engine": "tesseract_raw_psm3",
         "capability_proof": ["tesseract-5.x", "raw-full-page-psm3"],
-        "reputation_score": 0.98,
+        "reputation_score": rep_score,
         "worker_paypal_email": WORKER_PAYPAL_EMAIL,
     }
 
@@ -88,7 +104,15 @@ async def do_work(payload: dict):
 
     pytess = get_pytesseract()
     if not pytess or not TESSERACT_BIN:
-        raise HTTPException(status_code=500, detail="Tesseract binary not found on worker host.")
+        return {
+            "worker_id": WORKER_ID,
+            "jrp_id": jrp.get("jrp_id"),
+            "status": "UNAVAILABLE",
+            "message": "Tesseract binary not installed on host. Graceful degradation active.",
+            "execution_seconds": 0.0,
+            "output_payload": "",
+            "sha256_hash": hashlib.sha256(b"").hexdigest(),
+        }
 
     # Locate scan in JRP or data/real_scans/
     workspace_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

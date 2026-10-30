@@ -54,9 +54,24 @@ def score_bids_with_deadline(bids: List[Dict[str, Any]], deadline_sec: float) ->
 
     scored = []
     for b in valid:
+        worker_id = b.get("worker_id")
+        rep_score = b.get("reputation_score")
+        if worker_id and rep_score is None:
+            try:
+                from orchestrator.reputation import get_worker_reputation
+                rep = get_worker_reputation(worker_id)
+                rep_score = rep["reputation_score"]
+                b["reputation_score"] = rep_score
+                b["sample_size_n"] = rep.get("n_samples", 0)
+                if "measured_latency" not in b and rep.get("avg_latency_recent_10", 0) > 0:
+                    b["measured_latency"] = rep["avg_latency_recent_10"]
+            except Exception:
+                rep_score = 0.5
+        elif rep_score is None:
+            rep_score = 0.5
+
         bid_usd = b.get("bid_usd", max_price)
         latency = b.get("measured_latency", b.get("estimated_seconds", max_seconds))
-        rep_score = b.get("reputation_score", 0.5)
 
         price_score = round(1.0 - (bid_usd / (max_price * 1.25)), 4)
         speed_score = round(1.0 - (latency / (max_seconds * 1.25)), 4)

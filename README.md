@@ -60,43 +60,55 @@ Two genuinely differentiated code generation workers running on different model 
 - **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.30$.
 - **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.22$.
 
-#### Empirical Benchmark by Execution Source ($N = 23$ for 120B, $N = 25$ for 20B)
-ProcureAgent measures code worker performance across verified empirical runs split by execution source:
-- **`code-worker-01` (`openai/gpt-oss-120b`) Total = 23 Runs**:
+#### Empirical Benchmark by Execution Source ($N = 33$ for 120B, $N = 35$ for 20B)
+ProcureAgent measures code worker performance across verified empirical runs split by execution source and maintained in `audit/run_log.jsonl`:
+- **`code-worker-01` (`openai/gpt-oss-120b`) Total = 33 Runs**:
   - *Gate 4 Initial Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.71s, cost $0.00185).
   - *Adversarial Reallocation Invocations*: 3 runs (3 passed, 0 failed, avg latency 3.82s — invoked when 20B failed during 5-run reallocation testing).
   - *Concurrent Interleaved Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.92s).
-  - **Overall Pass Rate**: **23 / 23 (100.0%)**.
-  - **Bayesian Posterior**: $\text{Beta}(2+23, 1+0) = \text{Beta}(25, 1) \implies \mu = \frac{25}{26} \approx \mathbf{0.9615}$.
-  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.30$.
+  - *Fresh Live Concurrent Benchmark*: 10 runs (10 passed, 0 failed, avg latency 3.79s).
+  - **Overall Pass Rate**: **33 / 33 (100.0%)**.
+  - **Bayesian Posterior**: $\text{Beta}(2+33, 1+0) = \text{Beta}(35, 1) \implies \mu = \frac{35}{36} \approx \mathbf{0.9722}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.30$ (fixed operating fee set per worker).
   - **Computed Bid**: $\mathbf{\$0.30}$.
-- **`code-worker-02` (`openai/gpt-oss-20b`) Total = 25 Runs**:
+  - **Grand Average Latency (All 33 Runs)**: $4.4012\text{s}$.
+  - **Rolling Average Latency (Last 10 Runs)**: $3.7907\text{s}$.
+- **`code-worker-02` (`openai/gpt-oss-20b`) Total = 35 Runs**:
   - *Gate 4 Initial Benchmark*: 10 runs (3 passed, 7 failed, avg latency 9.02s).
   - *Adversarial Reallocation Test Suite*: 5 runs (2 passed, 3 failed, avg latency 3.02s).
-  - *Concurrent Interleaved Benchmark*: 10 runs (2 passed, 8 failed, avg latency 4.08s: passing runs 3.39s, failing runs 4.25s).
-  - **Overall Pass Rate**: **7 / 25 (28.0%)** (Pass rate varies heavily by run: 3/10 initial, 2/5 reallocation, 2/10 interleaved).
-  - **Bayesian Posterior**: $\text{Beta}(2+7, 1+18) = \text{Beta}(9, 19) \implies \mu = \frac{9}{28} \approx \mathbf{0.3214}$.
-  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.22$.
+  - *Concurrent Interleaved Benchmark*: 10 runs (2 passed, 8 failed, avg latency 4.08s).
+  - *Fresh Live Concurrent Benchmark*: 10 runs (5 passed, 5 failed, avg latency 2.91s).
+  - **Overall Pass Rate**: **12 / 35 (34.3%)** (The 20B's pass rate varies substantially between runs: 3/10 initial, 2/5 reallocation, 2/10 interleaved, 5/10 fresh concurrent benchmark).
+  - **Bayesian Posterior**: $\text{Beta}(2+12, 1+23) = \text{Beta}(14, 24) \implies \mu = \frac{14}{38} \approx \mathbf{0.3684}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.22$ (fixed operating fee set per worker).
   - **Computed Bid**: $\mathbf{\$0.22}$.
+  - **Grand Average Latency (All 35 Runs)**: $5.0046\text{s}$ (Passing runs avg $4.3823\text{s}$, Failing runs avg $5.3293\text{s}$).
+  - **Rolling Average Latency (Last 10 Runs)**: $2.9108\text{s}$.
 
 | Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Empirical Tradeoff |
 | :--- | :--- | :--- | :--- |
-| **Pass Rate (5/5 Hidden Tests)** | **23 / 23 (100.0%)** | **7 / 25 (28.0%)** | 120B has **3.6x higher reliability**. The 20B consistently fails month-end date clamping. |
-| **Speed Basis (Last 10 Interleaved Runs)** | **4.92s** | **4.08s** | In concurrent testing, 20B is 0.84s faster, but fails 80% of test cases. |
-| **Bayesian Reputation ($\alpha / (\alpha+\beta)$)** | **0.9615** ($\text{Beta}(25, 1)$) | **0.3214** ($\text{Beta}(9, 19)$) | 120B has earned near-perfect reputation; 20B is heavily penalized for frequent test failure. |
-| **Computed Bid ($C_{\text{api}} \times 1.25 + F_{\text{min}}$)** | **$0.30 USD** | **$0.22 USD** | 20B provides an 8¢ cheaper bid based on lower compute tier. |
+| **Pass Rate (5/5 Hidden Tests)** | **33 / 33 (100.0%)** | **12 / 35 (34.3%)** | 120B has **2.9x higher reliability**. The 20B frequently fails month-end date rollover clamping. |
+| **Speed Basis (Recent 10 Rolling)** | **3.7907s** | **2.9108s** | In recent rolling calls, 20B is 0.88s faster, but fails 50-80% of test suites. |
+| **Speed Basis (All Recorded Runs)** | **4.4012s** | **5.0046s** | Over all 33/35 recorded runs, 120B is faster on average (4.40s vs 5.00s). We do not claim one model is faster across all conditions. |
+| **Bayesian Reputation ($\alpha / (\alpha+\beta)$)** | **0.9722** ($\text{Beta}(35, 1)$) | **0.3684** ($\text{Beta}(14, 24)$) | 120B has earned near-perfect reputation; 20B is heavily penalized for frequent test failure. |
+| **Computed Bid ($C_{\text{api}} \times 1.25 + F_{\text{min}}$)** | **$0.30 USD** | **$0.22 USD** | 20B provides an 8¢ cheaper bid based on lower compute tier and operational fee ($0.22 vs $0.30). |
 
-#### Deadline-Driven Decision Matrix (Speed Basis: Last 10 Interleaved Runs)
+#### Deadline-Driven Decision Matrix
 Weights: $W_{\text{speed}} = 0.80 \lambda_t$, $W_{\text{price}} = 0.80 (1 - \lambda_t)$, $W_{\text{rep}} = 0.20$ (Normalized $\sum W = 1.0$).
 - **Tight Deadline ($6.0\text{s}, \lambda_t = 1.0$)**:
-  - `code-worker-01` (120B): $S_{\text{speed}} = \frac{6.0 - 4.92}{6.0 - 0.6} = 0.2000$. Composite: $0.80(0.2000) + 0.20(0.9615) = \mathbf{0.3523}$.
-  - `code-worker-02` (20B): $S_{\text{speed}} = \frac{6.0 - 4.08}{6.0 - 0.6} = 0.3556$. Composite: $0.80(0.3556) + 0.20(0.3214) = \mathbf{0.3488}$.
-  - **Outcome**: **`code-worker-01` (120B) WINS**. Although 20B is 0.84s faster, its 72% failure rate drags its reputation to 0.3214, allowing 120B's reliability to dominate.
+  - *Basis 1 (Recent-10 Rolling Latency: 20B = 2.9108s, 120B = 3.7907s)*:
+    - `code-worker-02` (20B, $N=35$): $S_{\text{speed}} = 0.3857, S_{\text{rep}} = 0.3684 \implies \text{Composite} = \mathbf{0.3822}$.
+    - `code-worker-01` (120B, $N=33$): $S_{\text{speed}} = 0.2000, S_{\text{rep}} = 0.9722 \implies \text{Composite} = \mathbf{0.3544}$.
+    - **Note**: The tight-deadline 6s result (0.3822 vs 0.3544, or in earlier runs 0.3523 vs 0.3488) is a near tie that depends on the latency basis.
+  - *Basis 2 (All Recorded Runs Grand Average Latency: 120B = 4.4012s, 20B = 5.0046s)*:
+    - **Winner under all-runs average**: **`code-worker-01` (120B) WINS decisively** with a score of **0.4316** vs 20B's **0.2337**, because 120B achieves both lower grand average latency ($4.40\text{s}$ vs $5.00\text{s}$) and near-perfect reputation ($0.9722$ vs $0.3684$).
 - **Loose Deadline ($30.0\text{s}, \lambda_t = 0.0$)**:
-  - `code-worker-01` (120B): $S_{\text{price}} = \frac{0.50 - 0.30}{0.50 - 0.15} = 0.5714$. Composite: $0.80(0.5714) + 0.20(0.9615) = \mathbf{0.6494}$.
-  - `code-worker-02` (20B): $S_{\text{price}} = \frac{0.50 - 0.22}{0.50 - 0.15} = 0.8000$. Composite: $0.80(0.8000) + 0.20(0.3214) = \mathbf{0.7043}$.
+  - `code-worker-02` (20B, $N=35$): $S_{\text{price}} = 0.4133, S_{\text{rep}} = 0.3684 \implies \text{Composite} = \mathbf{0.4043}$.
+  - `code-worker-01` (120B, $N=33$): $S_{\text{price}} = 0.2000, S_{\text{rep}} = 0.9722 \implies \text{Composite} = \mathbf{0.3544}$.
   - **Outcome**: **`code-worker-02` (20B) WINS**. When deadline pressure is zero, price weight dominates ($0.80$), allowing 20B's cheaper $0.22 bid to win the initial contract.
-- **End-to-End Adversarial Demo**: With scripted rogue fixture participating, rogue bids **$0.18** and wins the initial contract. Rogue fails hidden tests $\to$ $0.00 paid $\to$ dynamic reallocation to **`code-worker-01` (120B)** which passes all 5 tests and receives the live PayPal Sandbox payout.
+- **Rogue Adversarial Underbidding**: The rogue fixture calculates its bid via `workers/rogue_worker.py:53`:
+  $$\text{underbid\_price} = \text{round}(\max(0.15, \min(0.20, \text{max\_bid} \times 0.36)), 2)$$
+  At $\text{max\_bid} = \$0.50$, $0.50 \times 0.36 = \$0.18$. With claim of $1.0\text{s}$ latency and unpenalized $\text{Beta}(2, 1) = 0.6667$ prior, rogue wins the initial auction ($\text{Composite} = 0.7645$), is caught by the hidden test sandbox, paid $\$0.00$, and dynamically reallocated to `code-worker-01`.
 
 ### OCR Worker Bid Formula (Priced Per Compute Second)
 OCR workers price their machine labor upfront **per compute second** based on expected runtime rather than post-execution measured costs:
@@ -202,11 +214,17 @@ The following architectural capabilities are explicitly out of scope for the cur
 
 ## 9. Polaris UI Provenance & Design System Attribution
 
-The frontend command centre dashboard (`dashboard/index.html`) adapts the visual aesthetic and component architecture of the Polaris design system (from `emsearch-polaris/frontend`):
-- **Obsidian Palette & Depth Tokens**: Dark space background (`#0B0E14`), surface card elevated containers (`#121824`), and dark slate border rules (`#1E293B`).
+The frontend command centre dashboard (`dashboard/index.html`) adapts the visual aesthetic and component architecture of the Polaris design system (from `C:\Users\aarav.SOMEGUYWITHPRET\Documents\emsearch-polaris\frontend`):
+- **Core Dark Palette & Design Tokens**: Directly adapted from `src/design-system/tokens.css` and `src/index.css`:
+  - `--theme-bg: #09090b` / `#000000` (deep space canvas)
+  - `--theme-surface: #121214` (liquid glass card surface)
+  - `--theme-surface-subtle: #1c1c1e` (elevated control background)
+  - `--theme-border: rgba(255, 255, 255, 0.08)` and `--theme-border-strong: rgba(255, 255, 255, 0.16)`
+  - `--color-primary-500: #5e6ad2` and hazard colors (`--color-hazard-critical: #ff453a`, `--color-hazard-high: #ff9f0a`)
+- **Liquid Glass & Ambient Beams Background**: Implements the multi-angle rotating beam shaders (`--beam-rot`, `--beam-peak`) and reactive glowing ambient orb background directly adapted from Polaris `LoginPage.tsx` and `AppShell.tsx`, with `backdrop-filter: blur(24px) saturate(180%)`.
 - **Floating Dock Navigation Sidebar**: 28px rounded floating sidebar (`rounded-[28px]`, `w-16` expandable to `w-64` on hover) with glowing status indicators and icon pills.
-- **Unified Header & Dynamic Island**: 14-height top bar with `⌘K` command shortcut, live status indicators, and central Dynamic Island pill that expands to broadcast live procurement states (`IDLE`, `AUCTION`, `DELIVERY`, `VERIFYING`, `SETTLED`).
-- **Master / Detail Workspace**: Rounded top-left operations container (`rounded-tl-[32px]`), 9-stage capability pipeline strip, dual SVG budget gauge ($S + R \le B$), and collapsible right-hand telemetry dossier panel (`Trace`, `Integrity`, `Settlement`).
+- **Unified Header & Dynamic Island**: Header top bar with `⌘K` command shortcut, live status indicators, and central Dynamic Island pill that expands to broadcast live procurement states (`IDLE`, `AUCTION`, `DELIVERY`, `VERIFYING`, `SETTLED`).
+- **Interactive Digital Marketplace Map**: Replaces geospatial coordinates with a live canvas node graph showing Orchestrator, Worker Nodes (`code-worker-01`, `code-worker-02`, `rogue-worker-01`, `ocr-worker-01`), and the PayPal settlement gateway with animated telemetry packet trajectories.
 - **ProcureAgent Engine Differentiation**: All underlying autonomous capability procurement protocols, capability broker matching, Bayesian reputation updating, sandboxed Python code execution, Tesseract OCR verification, PayPal Sandbox API integrations, and tamper-evident SHA-256 hash chaining are entirely native to ProcureAgent.
 
 ---
@@ -214,6 +232,10 @@ The frontend command centre dashboard (`dashboard/index.html`) adapts the visual
 ## 10. Judge Quickstart & Deployment Guide
 
 ProcureAgent is designed for zero-friction evaluation by hackathon judges.
+
+> [!NOTE]
+> **Platform Testing Scope**: Only **Windows** was tested for this submission (specifically Windows 11 with Python 3.12).
+> **PayPal Payouts Regional Eligibility**: The PayPal Payouts REST API requires a Sandbox Business Account registered in a payout-supported country (e.g., US, UK, Canada, Australia). If you do not have a supported sandbox business account, you can evaluate the complete system seamlessly using **Replay Mode** (zero keys required) or by setting `PAYOUT_MODE=simulated` in `.env`.
 
 ### Quickstart: 3 Commands from Fresh Clone
 ```bash
@@ -235,13 +257,13 @@ Judges do NOT need API keys to evaluate the system:
 1. In the top bar, switch the toggle from **Live Mode** to **Replay Mode**.
 2. Click **Play (▶)** or step through events using **Next (▶)**.
 3. Observe the authentic 15-event recorded run (`bounty_1793358223`):
-   - Rogue worker underbids at **$0.18**.
-   - Treasury pre-flight reservation locks **$0.18**.
+   - Rogue worker underbids at **$0.18** (`workers/rogue_worker.py:53`).
+   - Treasury pre-flight internal budget reservation locks **$0.18**.
    - Sandboxed hidden unit tests catch the leap-year defect.
    - Payout is blocked (**$0.00 paid**), reservation is released.
    - Dynamic reallocation to `code-worker-01` (120B) passes all 5 hidden tests.
    - Real PayPal Sandbox batch `YMRTQZU3GUNMA` is settled to `PAYOUT_SUCCESS`.
-   - Append-only ledger commits with SHA-256 hash chaining.
+   - Append-only ledger commits with tamper-evident SHA-256 hash chaining.
 
 ### Live Mode Setup (Real Inference & Real PayPal Settlement)
 To execute live runs with live Groq inference and real PayPal Sandbox payouts:
@@ -258,7 +280,7 @@ To execute live runs with live Groq inference and real PayPal Sandbox payouts:
 1. Log in to the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/applications/sandbox).
 2. Under **REST API apps**, click **Create App**:
    - App Type: **Merchant / Platform**
-   - Sandbox Business Account: Select the default generated business account.
+   - Sandbox Business Account: Select your default generated business account (ensure the country is US or payout-supported).
 3. In your newly created app, copy your credentials into `.env`:
    ```env
    PAYPAL_CLIENT_ID=your_sandbox_client_id
@@ -267,6 +289,7 @@ To execute live runs with live Groq inference and real PayPal Sandbox payouts:
    PAYOUT_MODE=live
    ```
 4. Under **Testing Tools** $\to$ **Sandbox Accounts**, note the personal accounts used for worker recipients (or keep the default preconfigured `sb-bef9t53614820@personal.example.com`).
+5. *(Optional)* If testing without live PayPal Payout credentials, set `PAYOUT_MODE=simulated` to test full end-to-end orchestration with simulated settlement.
 
 #### 3. Tesseract OCR Engine Setup (Cross-Platform Automatic Detection)
 ProcureAgent dynamically resolves Tesseract on system paths with zero hardcoded user paths:
@@ -274,4 +297,5 @@ ProcureAgent dynamically resolves Tesseract on system paths with zero hardcoded 
 - **macOS**: `brew install tesseract`. Automatically detected on PATH (`/opt/homebrew/bin/tesseract` or `/usr/local/bin/tesseract`).
 - **Linux (Ubuntu/Debian)**: `sudo apt-get install -y tesseract-ocr`. Automatically detected on PATH (`/usr/bin/tesseract`).
 - *(Optional)*: Set `TESSERACT_PATH=/custom/path/to/tesseract` in `.env` if installed in a non-standard location.
+- **Graceful Degradation**: If Tesseract is not installed on the host, OCR workers cleanly decline OCR bids without throwing unhandled exceptions, and all code generation workflows continue operating without interruption.
 
