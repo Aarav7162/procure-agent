@@ -10,13 +10,6 @@ import shutil
 import threading
 from typing import List, Optional
 
-if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
-
 try:
     import colorama
     colorama.init(autoreset=True)
@@ -66,14 +59,6 @@ class Spinner:
         self.thread: Optional[threading.Thread] = None
 
     def _spin(self):
-        is_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
-        if not is_tty:
-            sys.stdout.write(f"  {CYAN}...{RESET} {self.message}\n")
-            sys.stdout.flush()
-            while self.running:
-                time.sleep(0.1)
-            return
-
         idx = 0
         while self.running:
             frame = SPINNER_FRAMES[idx % len(SPINNER_FRAMES)]
@@ -92,10 +77,9 @@ class Spinner:
         self.running = False
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=0.2)
-        # Clear line if TTY
-        if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
-            sys.stdout.write("\r" + " " * 80 + "\r")
-            sys.stdout.flush()
+        # Clear line
+        sys.stdout.write("\r" + " " * 80 + "\r")
+        sys.stdout.flush()
         if final_text is None:
             final_text = self.message
 
@@ -206,3 +190,4 @@ def render_rule_separator(text: Optional[str] = None):
         print(f"  {DIM}{'─' * 3} {text} {'─' * (w - len(text) - 5)}{RESET}")
     else:
         print(f"  {DIM}{'─' * 45}{RESET}")
+

@@ -7,6 +7,14 @@ manifest configuration, and self-testing.
 """
 import os
 import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import time
 import json
 import re
@@ -361,3 +369,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

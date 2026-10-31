@@ -27,3 +27,4 @@ dependencies = [
 [project.scripts]
 procure-agent = "procure.cli:main"
 worker-agent = "procure.worker_cli:main"
+

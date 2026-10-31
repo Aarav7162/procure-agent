@@ -7,6 +7,14 @@ live streaming events with spinners, and instant prompt returns.
 """
 import os
 import sys
+
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import time
 import json
 import asyncio
@@ -151,23 +159,50 @@ def cmd_workers():
     print()
 
 
-def cmd_budget():
-    """Shows cycle budget state: cap, spent, held for pending work, available."""
+def cmd_budget(new_amount: Optional[float] = None):
+    """Shows cycle budget state or updates weekly spend cap."""
+    policy_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "config", "bounty_policy.yaml"))
+    if new_amount is not None:
+        try:
+            import yaml
+            data = {}
+            if os.path.exists(policy_path):
+                with open(policy_path, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+            old_cap = float(data.get("weekly_spend_cap_usd", 25.00))
+            data["weekly_spend_cap_usd"] = round(float(new_amount), 2)
+            with open(policy_path, "w", encoding="utf-8") as f:
+                yaml.dump(data, f, default_flow_style=False)
+            print(f"\n  {GREEN}✓{RESET} {BOLD}Weekly spend cap updated:{RESET} ${old_cap:.2f} → {c_green(f'${new_amount:.2f}')}")
+            print(f"    Persisted to {c_dim('config/bounty_policy.yaml')}\n")
+        except Exception as e:
+            print(f"\n  {RED}✗ Failed to update budget:{RESET} {e}\n")
+
     cap = 25.00
     spent = 0.30
     reserved = 0.00
     available = 24.70
 
+    # Read latest policy cap directly from YAML
+    try:
+        if os.path.exists(policy_path):
+            import yaml
+            with open(policy_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+                cap = float(data.get("weekly_spend_cap_usd", cap))
+    except Exception:
+        pass
+
     try:
         r = httpx.get(f"{ORCHESTRATOR_URL}/budget", timeout=1.5)
         if r.status_code == 200:
             d = r.json()
-            cap = float(d.get("max_usd", cap))
             spent = float(d.get("spent_usd", spent))
             reserved = float(d.get("reserved_usd", reserved))
-            available = float(d.get("remaining_usd", cap - spent - reserved))
     except Exception:
         pass
+
+    available = max(0.0, cap - spent - reserved)
 
     rows = [
         ["Weekly Spend Cap", f"${cap:.2f}", c_dim("Enforced via config/bounty_policy.yaml")],
@@ -549,7 +584,7 @@ def cmd_help():
         ["/bottleneck", "Occupy local slot for 6s, then trigger task to demonstrate forced outsource"],
         ["/demo", "Run full 5-step showcase in order (designed for screencaps)"],
         ["/workers", "Print registered capability worker directory with masked emails & track record"],
-        ["/budget", "Show weekly spend cap, settled payouts, held reservations, and liquidity"],
+        ["/budget [amount]", "Show spend cap & liquidity, or update weekly cap (e.g. /budget 50.00)"],
         ["/policy", "Inspect config/bounty_policy.yaml spend rules and approval thresholds"],
         ["/ledger [--tail N]", "Print cryptographic audit trail with SHA-256 block hashes (default 10)"],
         ["/verify", "Recompute full hash chain across all blocks and report tamper check"],
@@ -627,8 +662,17 @@ def main():
                 cmd_demo()
             elif line == "/workers":
                 cmd_workers()
-            elif line == "/budget":
-                cmd_budget()
+            elif line.startswith("/budget"):
+                parts = line[7:].strip()
+                if parts:
+                    clean = parts.replace("set", "").replace("$", "").strip()
+                    try:
+                        val = float(clean)
+                        cmd_budget(new_amount=val)
+                    except ValueError:
+                        print(f"  {RED}Invalid budget amount:{RESET} '{parts}'. Usage: /budget or /budget <amount>")
+                else:
+                    cmd_budget()
             elif line == "/policy":
                 cmd_policy()
             elif line.startswith("/ledger"):
@@ -667,3 +711,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
