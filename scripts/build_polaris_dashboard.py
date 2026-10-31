@@ -803,6 +803,7 @@ HTML_TEMPLATE = r'''<!DOCTYPE html>
     }
   </style>
   <script src="three.min.js"></script>
+  <script src="beams.js"></script>
 </head>
 <body>
 
@@ -1836,8 +1837,37 @@ HTML_TEMPLATE = r'''<!DOCTYPE html>
       showToast("Switched to Live Microservices Stack");
     }
 
-    // Static Calm Background Renderer (Initializes Three.js calm static depth or 2D canvas)
+    // React Bits Beams Background Renderer (@react-bits/Beams-TS-TW)
     function initCalmBackground() {
+      // 1. Try React Bits Beams WebGL2 interactive shader engine
+      if (typeof window.initReactBitsBeams === "function") {
+        try {
+          const beams = window.initReactBitsBeams("beams-canvas", {
+            color: "#818cf8",
+            beamWidth: 140,
+            rotation: 28,
+            speed: 0.65,
+            waveLength: 240,
+            depth: 1.15,
+            sharpness: 0.6,
+            twist: 0.12,
+            fillLight: 0.35,
+            glow: 0.75,
+            brightness: 1.45,
+            grain: 0.22,
+            quality: 0.75,
+            mouseInteraction: true,
+            mouseStrength: 0.85,
+            fade: 0.1,
+            opacity: 0.60
+          });
+          if (beams) return;
+        } catch (e) {
+          console.warn("React Bits Beams initialization fallback:", e);
+        }
+      }
+
+      // 2. Three.js Fallback if WebGL2 shader unavailable
       const canvas = document.getElementById("beams-canvas");
       if (!canvas) return;
 
