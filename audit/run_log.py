@@ -133,3 +133,15 @@ def compute_worker_metrics_from_log(worker_id: str, exclude_backfilled: bool = T
         "allocation_cap_usd": 1.00 if n < 3 else 15.00
     }
 
+
+def compute_all_worker_metrics(exclude_backfilled: bool = True) -> Dict[str, Dict[str, Any]]:
+    """Computes reputation and metrics for all registered workers."""
+    from broker.registry import WORKER_REGISTRY
+    results = {}
+    for w in WORKER_REGISTRY:
+        wid = w["worker_id"]
+        m = compute_worker_metrics_from_log(wid, exclude_backfilled=exclude_backfilled)
+        m["n_runs"] = m["n_samples"]
+        results[wid] = m
+    return results
+

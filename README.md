@@ -5,10 +5,21 @@
 
 ---
 
-## 1. Core Architecture & Philosophy
+## 1. Core Architecture & Three User Personas
 
-ProcureAgent empowers autonomous AI agents to dynamically discover, procure, and settle specialized machine labor from competitive third-party worker agents. Unlike conventional agent frameworks that trust agent output implicitly, ProcureAgent operates under a **Zero-Trust Verification Architecture**:
+ProcureAgent is an autonomous capability procurement and settlement engine built for engineering organizations where automated systems manage corporate capital. Rather than viewing agent economics through an abstract "AI hires AI" lens, ProcureAgent solves real financial and operational challenges across three distinct user personas:
 
+1. **The Developer Running Batch Jobs Directly (`procure-agent` CLI)**:
+   - An engineer or data scientist running computational pipelines (e.g. bug resolution, document OCR extraction, or GPU inference batches) directly from the command line.
+   - Launches `procure-agent`, enters `/run <task> --budget 1.00`, and lets the engine discover qualified workers, negotiate bids, verify execution against hidden test suites, and settle micropayments automatically.
+2. **The AI Agent in an Automated Pipeline (`POST /procure` REST Endpoint)**:
+   - An autonomous pipeline agent (e.g., CI/CD repair bot, ETL orchestrator, or code review agent) that hits local CPU or memory bottlenecks.
+   - Makes a single synchronous HTTP call to `POST http://localhost:8000/procure` with `{ "task": "...", "budget_usd": 0.50 }`. ProcureAgent handles candidate discovery, budget reservation, sandbox execution, and PayPal settlement, returning clean, verified artifacts with $0 spent if verification fails.
+3. **The Team Lead Reviewing Spend & Governance (Polaris Dashboard)**:
+   - An engineering manager or team lead overseeing multi-agent compute expenditures.
+   - Monitors live weekly spend against policy caps ($25.00 limit), tracks candidate worker reputation curves via Bayesian $\text{Beta}(2,1)$ updates, reviews flagged allocations requiring human approval (> $5.00), and inspects tamper-evident SHA-256 hash chains across all ledger transactions.
+
+### Zero-Trust Verification Architecture
 - **Real Money, Verified Delivery**: Funds are managed via pre-flight internal budget reservations ($S + R \le B$) and released through **PayPal Payouts API** *only* after two-layer payload integrity and deterministic verification.
 - **Strict Realism Directive**: Everything that can be real is real (real PayPal API sandbox payouts, real Groq LLM inference, real Levenshtein OCR Character Error Rate evaluation, real sandboxed Python test execution, real live HTTP citation probing). Anything that cannot be real is visibly labeled `SIMULATED` across logs, UI, and ledger.
 - **Tamper-Evident Ledger**: Every state transition is written to an append-only SQLite ledger serialized with `BEGIN IMMEDIATE` and anchored to an external tamper-evident SHA-256 hash chain (`audit/latest_chain_hash.txt`).
@@ -274,7 +285,133 @@ The frontend command centre dashboard (`dashboard/index.html`) adapts the visual
 
 ---
 
-## 10. Judge Quickstart & Deployment Guide
+## 10. Interactive CLIs & Single REST Integration Endpoint
+
+ProcureAgent provides two dedicated interactive terminal applications and a unified REST endpoint to integrate with any development workflow or AI orchestration pipeline.
+
+### Installation via Editable Package
+Install the package locally into your Python environment:
+```bash
+pip install -e .
+```
+This registers two global terminal commands: `procure-agent` (Buyer CLI) and `worker-agent` (Seller CLI). (Fallbacks: `python -m procure` and `python -m procure.worker_cli`, or `python procure.py`).
+
+---
+
+### Buyer Interactive CLI (`procure-agent`)
+Designed in Claude Code minimal terminal aesthetic (clean box-drawing borders `┌─┬─┐`, live spinners `⠋...` resolving to `✓`/`✗`, and zero decorative emoji clutter).
+
+On launch, it verifies the microservice cluster and presents the interactive session:
+```text
+  ┌─────────────────────────────────────────────────────┐
+  │  ProcureAgent  v1.0  ·  Budget: $25.00  ·  LIVE    │
+  └─────────────────────────────────────────────────────┘
+  › _
+```
+
+#### Supported Interactive Commands:
+| Command | Description |
+| :--- | :--- |
+| `/run <task> [--budget B] [--deadline D]` | Start a streaming procurement cycle. Real-time updates for candidate bids, sandbox verification, and PayPal payout. |
+| `/attack` | Run scripted adversary scenario end-to-end with `PAYOUT_MODE=live`. Displays `[ADVERSARY]` badge, blocks payment, releases reservation, and reassigns to honest 120B worker with live PayPal payout. |
+| `/impossible` | Submit a task requiring unregistered capabilities (`quantum_crypto`). Proves zero dollars reserved and zero dollars spent. |
+| `/bottleneck` | Simulates local executor saturation for 6s, forcing automated outsourcing to the marketplace. |
+| `/demo` | Runs the full 5-step showcase in order (engineered for live terminal recordings). |
+| `/workers` | Formatted table of registered workers, declared capabilities, Bayesian reputations, pricing models, and masked PayPal accounts. |
+| `/budget` | Live treasury view: weekly spend cap, settled payouts, held reservations, and liquidity. |
+| `/policy` | Inspect active rules in `config/bounty_policy.yaml` and human approvals. |
+| `/ledger [--tail N]` | Print append-only cryptographic audit trail with SHA-256 block hashes. |
+| `/verify` | Recomputes full SHA-256 hash chain across all blocks against `audit/anchor.hash`. |
+| `/benchmark [--runs N]` | Run $N$ concurrent live calls per model and output sensitivity table. |
+| `/replay [--speed 1\|2\|4]` | Offline playback of verified recorded run with live streaming format. |
+| `/status` | Microservice cluster health check, local executor load, and weekly spend. |
+| `/help` / `/exit` | Command reference and graceful termination. |
+
+---
+
+### Seller Interactive CLI (`worker-agent`)
+Allows independent compute providers and specialist agents to register capabilities, accept jobs, monitor earnings, and manage reputations:
+```text
+  ┌─────────────────────────────────────────────────────┐
+  │  ProcureAgent Worker  v1.0  ·  code-worker-01      │
+  │  Status: ONLINE  ·  Reputation: 0.97  ·  N=30      │
+  │  PayPal: sb-****4820@personal.example.com          │
+  └─────────────────────────────────────────────────────┘
+  › _
+```
+
+#### Supported Seller Commands:
+- `/start`: Register with broker and stream live incoming jobs, bids, verification, and payouts.
+- `/stop`: Gracefully deregister from broker after completing active task.
+- `/status`: Operational status, daily jobs handled, lifetime earnings, and Bayesian reputation.
+- `/manifest`: Inspect declared capabilities, pricing formula, model engine, and PayPal payout email.
+- `/edit`: Interactively update capabilities, operating fee, or PayPal Sandbox account.
+- `/earnings [--today | --week | --all]`: Itemized table of completed jobs with PayPal batch IDs and settled amounts.
+- `/reputation`: Detailed Bayesian track record: $\text{Beta}(\alpha, \beta)$ parameters, pass rate, and cold-start cap.
+- `/jobs [--live | --history N]`: Current running job or last $N$ completed tasks.
+- `/test`: Run complete self-test: checks local model API connectivity, runs code repair test fixture, validates against hidden unit tests, and verifies PayPal Sandbox recipient readiness.
+- `/logs [--tail N]`: Stream real-time worker logs.
+
+---
+
+### Single REST Integration Endpoint (`POST /procure`)
+For automated pipelines, CI/CD bots, or autonomous agents that need to delegate work programmatically.
+
+- **URL**: `http://localhost:8000/procure`
+- **Method**: `POST`
+- **Request Body**:
+  ```json
+  {
+    "task": "Fix month-end rollover bug in billing.py",
+    "budget_usd": 0.50,
+    "deadline_sec": 15,
+    "source_code": null
+  }
+  ```
+- **Response Schema**:
+  ```json
+  {
+    "status": "PAID",
+    "batch_id": "9SVYE9TWQ3FU2",
+    "output": "def calculate_next_billing_date(...): ...",
+    "spent_usd": 0.30,
+    "verified": true,
+    "summary": "Procurement completed: task delivered by code-worker-01, verified, and paid via PayPal Sandbox."
+  }
+  ```
+  *(Status values: `PAID`, `BLOCKED`, `NO_CAPABLE_WORKERS`, `POLICY_REJECTED`)*
+
+#### cURL Integration Example:
+```bash
+curl -X POST http://localhost:8000/procure \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Fix month-end rollover bug in billing.py", "budget_usd": 0.50}'
+```
+
+#### 10-Line Python Integration Snippet:
+```python
+import httpx
+
+resp = httpx.post(
+    "http://localhost:8000/procure",
+    json={"task": "Fix month-end rollover bug in billing.py", "budget_usd": 0.50},
+    timeout=30.0,
+).json()
+
+if resp["status"] == "PAID":
+    print(f"Verified & Paid via PayPal Batch: {resp['batch_id']} (${resp['spent_usd']})")
+    print("Clean Output:\n", resp["output"])
+else:
+    print(f"Procurement Failed ({resp['status']}): $0.00 spent. Reason: {resp['summary']}")
+```
+
+#### Example Workflows Supported:
+1. **Python Bug Remediation**: Resolving month-end rollover bugs with hidden unit test verification.
+2. **GPU Batch Processing**: Offloading high-compute matrix transformations or text embeddings when local compute is saturated.
+
+---
+
+## 11. Judge Quickstart & Deployment Guide
 
 ProcureAgent is designed for zero-friction evaluation by hackathon judges.
 

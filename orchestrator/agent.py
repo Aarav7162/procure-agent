@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -159,6 +160,246 @@ async def submit_task(req: TaskRequest):
     asyncio.create_task(_safe_loop())
 
     return {"cycle_id": cycle_id, "status": "running"}
+
+
+class ProcureRequest(BaseModel):
+    task: str
+    budget_usd: float
+    deadline_sec: Optional[int] = 15
+    source_code: Optional[str] = None
+
+
+@app.post("/procure")
+async def procure_endpoint(req: ProcureRequest) -> Dict[str, Any]:
+    """
+    Direct synchronous integration point for external agents or automated pipelines.
+    Runs autonomous procurement cycle and returns structured result.
+    """
+    global _budget_manager, _current_cycle
+    cycle_id = str(uuid.uuid4())[:8]
+    _current_cycle = {"cycle_id": cycle_id, "task": req.task}
+    init_ledger()
+    bm = BudgetManager(cycle_id=cycle_id, max_usd=req.budget_usd)
+    _budget_manager = bm
+
+    # 1. Policy verification
+    from orchestrator.policy import evaluate_bounty_policy
+    task_l = req.task.lower()
+    if any(k in task_l for k in ["ocr", "scan", "receipt"]):
+        task_type = "document_ocr"
+    elif any(k in task_l for k in ["synthesis", "summary", "summarize", "research"]):
+        task_type = "llm_synthesis"
+    else:
+        task_type = "code_bounty"
+
+    allowed, pol_status, pol_details = evaluate_bounty_policy(task_type, req.budget_usd)
+    if not allowed and pol_status == "POLICY_REJECTED":
+        return {
+            "status": "POLICY_REJECTED",
+            "batch_id": None,
+            "output": None,
+            "spent_usd": 0.0,
+            "verified": False,
+            "summary": f"Policy rejection: {pol_details.get('reason', 'Exceeded policy rules')}",
+        }
+
+    await broadcast("TASK_RECEIVED", {
+        "cycle_id": cycle_id,
+        "description": req.task,
+        "max_budget_usd": req.budget_usd,
+    })
+
+    # 2. Build JRP
+    from orchestrator.jrp_builder import keyword_fallback_jrp
+    try:
+        jrp = build_jrp(req.task, req.budget_usd, cycle_id)
+    except Exception:
+        jrp = keyword_fallback_jrp(req.task, req.budget_usd, cycle_id)
+
+    jrp["deadline_seconds"] = req.deadline_sec or 15
+    if req.source_code:
+        jrp["source_code"] = req.source_code
+
+    if "billing" in task_l or "calculate_next_billing_date" in task_l:
+        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "demo_repos", "billing_engine"))
+        src_file = os.path.join(repo_dir, "billing.py")
+        pub_file = os.path.join(repo_dir, "tests", "test_public_billing.py")
+        hid_file = os.path.join(repo_dir, "tests", "test_hidden_billing.py")
+        if not jrp.get("source_code") and os.path.exists(src_file):
+            with open(src_file, "r", encoding="utf-8") as f:
+                jrp["source_code"] = f.read()
+        if os.path.exists(pub_file):
+            with open(pub_file, "r", encoding="utf-8") as f:
+                jrp["public_tests"] = f.read()
+            jrp["task_type"] = "code_bounty"
+        if os.path.exists(hid_file):
+            with open(hid_file, "r", encoding="utf-8") as f:
+                jrp["acceptance_rules"] = [{"type": "unit_test", "test_suite_code": f.read()}]
+
+    await broadcast("JRP_EMITTED", {"cycle_id": cycle_id, "jrp": jrp})
+
+    # 3. Request Bids from Marketplace Broker
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(f"{BROKER_URL}/bid", json=jrp)
+            resp.raise_for_status()
+            broker_resp = resp.json()
+            bids = broker_resp.get("bids", [])
+            broker_status = broker_resp.get("status")
+
+            if broker_status == "NO_CAPABLE_WORKERS" or not bids:
+                await broadcast("NO_CAPABLE_WORKERS", {
+                    "cycle_id": cycle_id,
+                    "message": "No registered workers satisfy required capabilities. Aborting with $0 spent.",
+                    "budget_state": bm.summary(),
+                })
+                return {
+                    "status": "NO_CAPABLE_WORKERS",
+                    "batch_id": None,
+                    "output": None,
+                    "spent_usd": 0.0,
+                    "verified": False,
+                    "summary": f"No capable workers available for requested capabilities ({jrp.get('required_capabilities')}). Zero dollars spent.",
+                }
+    except Exception as e:
+        return {
+            "status": "ERROR",
+            "batch_id": None,
+            "output": None,
+            "spent_usd": 0.0,
+            "verified": False,
+            "summary": f"Marketplace broker unreachable: {e}",
+        }
+
+    await broadcast("BIDS_RECEIVED", {"cycle_id": cycle_id, "bids": bids})
+
+    # 4. Filter & Evaluate Candidates
+    remaining_bids = [b for b in bids if b.get("status") == "BID" and b["bid_usd"] <= jrp["max_bid_usd"]]
+    if not remaining_bids:
+        return {
+            "status": "NO_CAPABLE_WORKERS",
+            "batch_id": None,
+            "output": None,
+            "spent_usd": 0.0,
+            "verified": False,
+            "summary": "All bids exceeded maximum budget limit. Zero dollars spent.",
+        }
+
+    payout_result = None
+    winning_output = None
+    final_winner = None
+
+    while remaining_bids and not payout_result:
+        winner = min(remaining_bids, key=lambda b: b["bid_usd"])
+        await broadcast("BID_AWARDED", {"cycle_id": cycle_id, "winner": winner})
+
+        ok, res_id, res_msg = bm.reserve(jrp["jrp_id"], winner["worker_id"], winner["bid_usd"])
+        if not ok:
+            return {
+                "status": "BLOCKED",
+                "batch_id": None,
+                "output": None,
+                "spent_usd": 0.0,
+                "verified": False,
+                "summary": f"Budget reservation blocked: {res_msg}",
+            }
+
+        await broadcast("BUDGET_RESERVED", {
+            "cycle_id": cycle_id,
+            "reservation_id": res_id,
+            "worker_id": winner["worker_id"],
+            "amount_usd": winner["bid_usd"],
+            "budget_state": bm.summary(),
+        })
+
+        delivery = None
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                work_resp = await client.post(
+                    f"http://127.0.0.1:{winner['port']}/work",
+                    json={"jrp": jrp},
+                )
+                work_resp.raise_for_status()
+                delivery = work_resp.json()
+        except Exception as e:
+            bm.release(res_id, reason=f"Worker delivery exception: {e}")
+            remaining_bids.remove(winner)
+            continue
+
+        await broadcast("DELIVERY_RECEIVED", {
+            "cycle_id": cycle_id,
+            "worker_id": winner["worker_id"],
+            "delivery": delivery,
+        })
+
+        verified, stage_status, report = verify_delivery(jrp, delivery)
+        await broadcast("TWO_STAGE_VERIFICATION", {
+            "cycle_id": cycle_id,
+            "worker_id": winner["worker_id"],
+            "verified": verified,
+            "stage": stage_status,
+            "report": report,
+        })
+
+        if not verified:
+            bm.release(res_id, reason=f"Rejected at {stage_status}: {report.get('message')}")
+            await broadcast("PAYMENT_BLOCKED", {
+                "cycle_id": cycle_id,
+                "worker_id": winner["worker_id"],
+                "stage": stage_status,
+                "message": f"Payment withheld from {winner['worker_id']}: {report.get('message')}",
+                "reservation_released": res_id,
+                "budget_state": bm.summary(),
+            })
+            remaining_bids.remove(winner)
+            continue
+
+        # Verified -> Live PayPal Sandbox Payout
+        worker_email = winner.get("worker_paypal_email", WORKER_EMAIL)
+        try:
+            payout_result = send_payout(
+                cycle_id=cycle_id,
+                jrp_id=jrp["jrp_id"],
+                worker_id=winner["worker_id"],
+                worker_email=worker_email,
+                amount_usd=winner["bid_usd"],
+                sha256_hash=delivery.get("sha256_hash", ""),
+                reservation_id=res_id,
+                max_budget_usd=bm.max_usd,
+            )
+            reconciled = poll_and_reconcile_payout(payout_result["payout_batch_id"])
+            payout_result["final_status"] = reconciled.get("final_status", payout_result["status"])
+            winning_output = delivery.get("result", delivery.get("output_sample", ""))
+            final_winner = winner
+
+            await broadcast("PAYOUT_SENT", {
+                "cycle_id": cycle_id,
+                "payout": payout_result,
+                "budget": bm.summary(),
+            })
+        except Exception as e:
+            bm.release(res_id, reason=f"Payout settlement error: {e}")
+            remaining_bids.remove(winner)
+            continue
+
+    if payout_result and final_winner:
+        return {
+            "status": "PAID",
+            "batch_id": payout_result.get("payout_batch_id"),
+            "output": winning_output,
+            "spent_usd": round(float(final_winner["bid_usd"]), 2),
+            "verified": True,
+            "summary": f"Procurement completed: task delivered by {final_winner['worker_id']}, verified, and paid via PayPal Sandbox.",
+        }
+
+    return {
+        "status": "BLOCKED",
+        "batch_id": None,
+        "output": None,
+        "spent_usd": 0.0,
+        "verified": False,
+        "summary": "All bids failed acceptance verification. Zero dollars spent.",
+    }
 
 
 @app.get("/budget")
