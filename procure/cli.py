@@ -443,7 +443,7 @@ def run_streaming_task(task_desc: str, budget: float = 1.00, deadline: int = 15)
 
     res = None
     try:
-        r = httpx.post(f"{ORCHESTRATOR_URL}/procure", json={"task": task_desc, "budget_usd": budget, "deadline_sec": deadline}, timeout=35.0)
+        r = httpx.post(f"{ORCHESTRATOR_URL}/procure", json={"task": task_desc, "budget_usd": budget, "deadline_sec": deadline}, timeout=75.0)
         if r.status_code == 200:
             res = r.json()
     except Exception as e:

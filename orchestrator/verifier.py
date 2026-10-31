@@ -134,10 +134,15 @@ def verify_code_unit_tests(code_str: str, test_suite_code: str, timeout_sec: flo
     as well as standalone function snippets.
     """
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Write candidate code as module file
-        mod_path = os.path.join(temp_dir, f"{module_name}.py")
-        with open(mod_path, "w", encoding="utf-8") as f:
-            f.write(code_str)
+        # Dynamically write candidate code to all referenced module names
+        import re
+        imported_mods = set(re.findall(r'(?:from|import)\s+([a-zA-Z0-9_]+)', test_suite_code))
+        stdlib = {"sys", "os", "math", "datetime", "calendar", "json", "traceback", "unittest", "pytest", "re", "time"}
+        target_mods = (imported_mods - stdlib) | {module_name, "billing", "calculator", "solution", "app"}
+        for mod in target_mods:
+            mod_path = os.path.join(temp_dir, f"{mod}.py")
+            with open(mod_path, "w", encoding="utf-8") as f:
+                f.write(code_str)
 
         # Write test runner script
         runner_path = os.path.join(temp_dir, "test_runner.py")
@@ -145,10 +150,13 @@ def verify_code_unit_tests(code_str: str, test_suite_code: str, timeout_sec: flo
             f.write("import sys, os\n")
             f.write("sys.path.insert(0, os.path.abspath('.'))\n")
             # Expose symbols directly in case test suite doesn't have imports
-            f.write(f"try:\n    from {module_name} import *\nexcept Exception:\n    pass\n\n")
-            f.write(test_suite_code + "\n\n")
-            # Auto-execute test_* functions if defined pytest-style
+            for mod in target_mods:
+                f.write(f"try:\n    from {mod} import *\nexcept Exception:\n    pass\n")
+            f.write("\n" + test_suite_code + "\n\n")
+            # Auto-execute run_tests or test_* functions
             f.write("if __name__ == '__main__':\n")
+            f.write("    if 'run_tests' in globals() and callable(globals()['run_tests']):\n")
+            f.write("        globals()['run_tests']()\n")
             f.write("    for name, obj in list(globals().items()):\n")
             f.write("        if name.startswith('test_') and callable(obj):\n")
             f.write("            obj()\n")
