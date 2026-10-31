@@ -385,6 +385,7 @@ async def procure_endpoint(req: ProcureRequest) -> Dict[str, Any]:
     if payout_result and final_winner:
         return {
             "status": "PAID",
+            "worker_id": final_winner["worker_id"],
             "batch_id": payout_result.get("payout_batch_id"),
             "output": winning_output,
             "spent_usd": round(float(final_winner["bid_usd"]), 2),

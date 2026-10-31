@@ -457,10 +457,23 @@ def run_streaming_task(task_desc: str, budget: float = 1.00, deadline: int = 15)
     status = res.get("status")
     batch_id = res.get("batch_id")
     spent = res.get("spent_usd", 0.0)
+    worker_id = res.get("worker_id")
+    if not worker_id and "delivered by " in res.get("summary", ""):
+        m = re.search(r'delivered by ([a-zA-Z0-9_-]+)', res.get("summary", ""))
+        if m:
+            worker_id = m.group(1)
 
     if status == "PAID":
         s3.stop(success=True, final_text=f"Delivery verified & passed all acceptance criteria")
-        print(f"  {GREEN}✓{RESET} {BOLD}PAID{RESET}  Batch: {c_cyan(batch_id or 'N/A')}  ·  ${spent:.2f}  ·  {c_green('PAYOUT_SUCCESS')}")
+        print()
+        print(f"  {GREEN}✓{RESET} {BOLD}Contract Awarded To:{RESET} {c_green(worker_id or 'code-worker-01')}")
+        print(f"  {GREEN}✓{RESET} {BOLD}Settlement:{RESET} ${spent:.2f} USD settled via PayPal Sandbox")
+        print(f"  {GREEN}✓{RESET} {BOLD}Batch ID:{RESET} {c_cyan(batch_id or 'N/A')}  ·  {c_green('PAYOUT_SUCCESS')}")
+        if res.get("output"):
+            out_preview = [line for line in res["output"].strip().split("\n") if line.strip()][:6]
+            print(f"\n  {BOLD}Verified Artifact Preview:{RESET}")
+            for l in out_preview:
+                print(f"    {c_dim(l)}")
     elif status == "NO_CAPABLE_WORKERS":
         s3.stop(success=False, final_text=res.get("summary", "No capable workers"))
         print(f"  {GREEN}✓{RESET} {BOLD}Zero Spend Guarantee:{RESET} $0.00 spent")
