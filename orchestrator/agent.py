@@ -92,6 +92,15 @@ async def get_dashboard():
     with open(dashboard_file, "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+
+@app.get("/three.min.js")
+async def get_three_js():
+    three_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "three.min.js"))
+    if os.path.exists(three_file):
+        return FileResponse(three_file, media_type="application/javascript")
+    return HTMLResponse(content="// Three.js local file missing", status_code=404)
+
+
 class TaskRequest(BaseModel):
     description: str
     max_budget_usd: float = 15.0

@@ -50,3 +50,4 @@ def test_embedded_replay_equals_file():
 if __name__ == "__main__":
     test_embedded_replay_equals_file()
     print("[PASS] test_embedded_replay_equals_file passed! Embedded replay exactly matches demo/recorded_runs/recorded_rogue_run.json.")
+

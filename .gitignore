@@ -42,3 +42,9 @@ env/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Chat history, transcripts & temporary notes
+context.md
+scratch/
+*.tmp
+

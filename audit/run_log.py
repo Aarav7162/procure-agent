@@ -51,8 +51,8 @@ def append_run_log(
     return entry
 
 
-def get_all_run_logs(worker_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Reads all run logs, optionally filtering by worker_id."""
+def get_all_run_logs(worker_id: Optional[str] = None, exclude_backfilled: bool = False) -> List[Dict[str, Any]]:
+    """Reads all run logs, optionally filtering by worker_id and backfilled status."""
     if not os.path.exists(RUN_LOG_PATH):
         return []
 
@@ -64,6 +64,8 @@ def get_all_run_logs(worker_id: Optional[str] = None) -> List[Dict[str, Any]]:
                 continue
             try:
                 rec = json.loads(line)
+                if exclude_backfilled and "backfilled" in rec.get("notes", "").lower():
+                    continue
                 if worker_id is None or rec.get("worker_id") == worker_id:
                     records.append(rec)
             except Exception:
@@ -71,12 +73,29 @@ def get_all_run_logs(worker_id: Optional[str] = None) -> List[Dict[str, Any]]:
     return records
 
 
-def compute_worker_metrics_from_log(worker_id: str) -> Dict[str, Any]:
+def get_run_counts_by_source() -> Dict[str, Dict[str, int]]:
+    """Returns run counts by worker and source script, categorizing backfilled vs live."""
+    records = get_all_run_logs(exclude_backfilled=False)
+    summary: Dict[str, Dict[str, int]] = {}
+    for r in records:
+        wid = r.get("worker_id", "unknown")
+        src = r.get("source_script", "unknown")
+        notes = r.get("notes", "")
+        key = f"{src} [backfilled]" if "backfilled" in notes.lower() else f"{src} [live]"
+        if wid not in summary:
+            summary[wid] = {}
+        summary[wid][key] = summary[wid].get(key, 0) + 1
+    return summary
+
+
+def compute_worker_metrics_from_log(worker_id: str, exclude_backfilled: bool = True) -> Dict[str, Any]:
     """
     Computes reputation (Bayesian Beta), latency, and sample size N
     strictly from audit/run_log.jsonl.
+    By default excludes backfilled rows so scores reflect fresh live benchmark runs.
     """
-    records = get_all_run_logs(worker_id=worker_id)
+    records = get_all_run_logs(worker_id=worker_id, exclude_backfilled=exclude_backfilled)
+    all_records = get_all_run_logs(worker_id=worker_id, exclude_backfilled=False)
     n = len(records)
 
     passes = sum(1 for r in records if r.get("pass_fail") == "PASS")
@@ -99,6 +118,8 @@ def compute_worker_metrics_from_log(worker_id: str) -> Dict[str, Any]:
     return {
         "worker_id": worker_id,
         "n_samples": n,
+        "total_records_with_backfill": len(all_records),
+        "backfilled_count": len(all_records) - n,
         "passes": passes,
         "failures": failures,
         "pass_rate": round(passes / n, 4) if n > 0 else 0.0,
@@ -111,3 +132,4 @@ def compute_worker_metrics_from_log(worker_id: str) -> Dict[str, Any]:
         "is_cold_start": n < 3,
         "allocation_cap_usd": 1.00 if n < 3 else 15.00
     }
+

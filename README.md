@@ -60,52 +60,94 @@ Two genuinely differentiated code generation workers running on different model 
 - **`code-worker-01` (High-Capacity 120B)**: Uses live Groq API inference (`openai/gpt-oss-120b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.30$.
 - **`code-worker-02` (Fast Lightweight 20B)**: Uses live Groq API inference (`openai/gpt-oss-20b`). Fixed operating fee set per worker $F_{\text{min}} = \$0.22$.
 
-#### Empirical Benchmark by Execution Source ($N = 33$ for 120B, $N = 35$ for 20B)
-ProcureAgent measures code worker performance across verified empirical runs split by execution source and maintained in `audit/run_log.jsonl`:
-- **`code-worker-01` (`openai/gpt-oss-120b`) Total = 33 Runs**:
-  - *Gate 4 Initial Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.71s, cost $0.00185).
-  - *Adversarial Reallocation Invocations*: 3 runs (3 passed, 0 failed, avg latency 3.82s — invoked when 20B failed during 5-run reallocation testing).
-  - *Concurrent Interleaved Benchmark*: 10 runs (10 passed, 0 failed, avg latency 4.92s).
-  - *Fresh Live Concurrent Benchmark*: 10 runs (10 passed, 0 failed, avg latency 3.79s).
-  - **Overall Pass Rate**: **33 / 33 (100.0%)**.
-  - **Bayesian Posterior**: $\text{Beta}(2+33, 1+0) = \text{Beta}(35, 1) \implies \mu = \frac{35}{36} \approx \mathbf{0.9722}$.
-  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.30$ (fixed operating fee set per worker).
+#### Empirical Benchmark by Execution Source ($N = 30$ Live Runs, Excludes Backfill)
+ProcureAgent measures code worker performance across verified empirical runs maintained in `audit/run_log.jsonl`. Scores are computed **exclusively from the fresh $N=30$ live concurrent benchmark**, while earlier runs remain strictly marked `"backfilled"` in the log:
+
+**Run Counts by Source (Full Audit Trail)**:
+- **`code-worker-01` (`openai/gpt-oss-120b`) Total = 53 Logged Rows**:
+  - `scripts/benchmark_10_runs_code_workers.py` [backfilled]: 10 runs (10 passed, 0 failed, avg latency 4.71s).
+  - `scripts/test_reassignment_scenario.py` [backfilled]: 3 runs (3 passed, 0 failed, avg latency 3.82s).
+  - `scripts/benchmark_interleaved_code_workers.py` [backfilled]: 10 runs (10 passed, 0 failed, avg latency 4.92s).
+  - `scripts/run_live_30_benchmark.py` [live]: 30 runs (30 passed, 0 failed, avg latency 5.62s).
+  - **Live Sample Size ($N_{\text{live}}$)**: **30 runs** (exclusively used for scoring).
+  - **Live Pass Rate**: **30 / 30 (100.0%)**.
+  - **Bayesian Posterior**: $\text{Beta}(2+30, 1+0) = \text{Beta}(32, 1) \implies \mu = \frac{32}{33} \approx \mathbf{0.9697}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.30$.
   - **Computed Bid**: $\mathbf{\$0.30}$.
-  - **Grand Average Latency (All 33 Runs)**: $4.4012\text{s}$.
-  - **Rolling Average Latency (Last 10 Runs)**: $3.7907\text{s}$.
-- **`code-worker-02` (`openai/gpt-oss-20b`) Total = 35 Runs**:
-  - *Gate 4 Initial Benchmark*: 10 runs (3 passed, 7 failed, avg latency 9.02s).
-  - *Adversarial Reallocation Test Suite*: 5 runs (2 passed, 3 failed, avg latency 3.02s).
-  - *Concurrent Interleaved Benchmark*: 10 runs (2 passed, 8 failed, avg latency 4.08s).
-  - *Fresh Live Concurrent Benchmark*: 10 runs (5 passed, 5 failed, avg latency 2.91s).
-  - **Overall Pass Rate**: **12 / 35 (34.3%)** (The 20B's pass rate varies substantially between runs: 3/10 initial, 2/5 reallocation, 2/10 interleaved, 5/10 fresh concurrent benchmark).
-  - **Bayesian Posterior**: $\text{Beta}(2+12, 1+23) = \text{Beta}(14, 24) \implies \mu = \frac{14}{38} \approx \mathbf{0.3684}$.
-  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.22$ (fixed operating fee set per worker).
+  - **Grand Average Latency (All 30 Live Runs)**: $5.6185\text{s}$.
+  - **Rolling Average Latency (Last 10 Runs)**: $5.6696\text{s}$.
+- **`code-worker-02` (`openai/gpt-oss-20b`) Total = 55 Logged Rows**:
+  - `scripts/benchmark_10_runs_code_workers.py` [backfilled]: 10 runs (3 passed, 7 failed, avg latency 9.02s).
+  - `scripts/test_reassignment_scenario.py` [backfilled]: 5 runs (2 passed, 3 failed, avg latency 3.02s).
+  - `scripts/benchmark_interleaved_code_workers.py` [backfilled]: 10 runs (2 passed, 8 failed, avg latency 4.08s).
+  - `scripts/run_live_30_benchmark.py` [live]: 30 runs (7 passed, 23 failed, avg latency 4.87s).
+  - **Live Sample Size ($N_{\text{live}}$)**: **30 runs** (exclusively used for scoring).
+  - **Live Pass Rate**: **7 / 30 (23.3%)** (The 20B consistently fails hidden leap-year and month-end boundary clamping tests).
+  - **Bayesian Posterior**: $\text{Beta}(2+7, 1+23) = \text{Beta}(9, 24) \implies \mu = \frac{9}{33} \approx \mathbf{0.2727}$.
+  - **Fixed Operating Fee**: $F_{\text{min}} = \$0.22$.
   - **Computed Bid**: $\mathbf{\$0.22}$.
-  - **Grand Average Latency (All 35 Runs)**: $5.0046\text{s}$ (Passing runs avg $4.3823\text{s}$, Failing runs avg $5.3293\text{s}$).
-  - **Rolling Average Latency (Last 10 Runs)**: $2.9108\text{s}$.
+  - **Grand Average Latency (All 30 Live Runs)**: $4.8745\text{s}$.
+  - **Rolling Average Latency (Last 10 Runs)**: $4.6963\text{s}$.
 
 | Metric | `code-worker-01` (`openai/gpt-oss-120b`) | `code-worker-02` (`openai/gpt-oss-20b`) | Empirical Tradeoff |
 | :--- | :--- | :--- | :--- |
-| **Pass Rate (5/5 Hidden Tests)** | **33 / 33 (100.0%)** | **12 / 35 (34.3%)** | 120B has **2.9x higher reliability**. The 20B frequently fails month-end date rollover clamping. |
-| **Speed Basis (Recent 10 Rolling)** | **3.7907s** | **2.9108s** | In recent rolling calls, 20B is 0.88s faster, but fails 50-80% of test suites. |
-| **Speed Basis (All Recorded Runs)** | **4.4012s** | **5.0046s** | Over all 33/35 recorded runs, 120B is faster on average (4.40s vs 5.00s). We do not claim one model is faster across all conditions. |
-| **Bayesian Reputation ($\alpha / (\alpha+\beta)$)** | **0.9722** ($\text{Beta}(35, 1)$) | **0.3684** ($\text{Beta}(14, 24)$) | 120B has earned near-perfect reputation; 20B is heavily penalized for frequent test failure. |
+| **Pass Rate (5/5 Hidden Tests)** | **30 / 30 (100.0%)** | **7 / 30 (23.3%)** | 120B has **4.3x higher reliability**. The 20B model reliably fails century leap-year clamping (`year % 100 == 0`). |
+| **Speed Basis (Recent 10 Rolling)** | **5.6696s** | **4.6963s** | In recent rolling calls, 20B is 0.97s faster, but fails 76.7% of test suites. |
+| **Speed Basis (All 30 Live Runs)** | **5.6185s** | **4.8745s** | Across all 30 live concurrent runs, 20B averages 4.87s vs 120B's 5.62s. |
+| **Bayesian Reputation ($\alpha / (\alpha+\beta)$)** | **0.9697** ($\text{Beta}(32, 1)$) | **0.2727** ($\text{Beta}(9, 24)$) | 120B earned near-perfect reputation; 20B is heavily penalized for frequent test failure. |
 | **Computed Bid ($C_{\text{api}} \times 1.25 + F_{\text{min}}$)** | **$0.30 USD** | **$0.22 USD** | 20B provides an 8¢ cheaper bid based on lower compute tier and operational fee ($0.22 vs $0.30). |
 
-#### Deadline-Driven Decision Matrix
-Weights: $W_{\text{speed}} = 0.80 \lambda_t$, $W_{\text{price}} = 0.80 (1 - \lambda_t)$, $W_{\text{rep}} = 0.20$ (Normalized $\sum W = 1.0$).
-- **Tight Deadline ($6.0\text{s}, \lambda_t = 1.0$)**:
-  - *Basis 1 (Recent-10 Rolling Latency: 20B = 2.9108s, 120B = 3.7907s)*:
-    - `code-worker-02` (20B, $N=35$): $S_{\text{speed}} = 0.3857, S_{\text{rep}} = 0.3684 \implies \text{Composite} = \mathbf{0.3822}$.
-    - `code-worker-01` (120B, $N=33$): $S_{\text{speed}} = 0.2000, S_{\text{rep}} = 0.9722 \implies \text{Composite} = \mathbf{0.3544}$.
-    - **Note**: The tight-deadline 6s result (0.3822 vs 0.3544, or in earlier runs 0.3523 vs 0.3488) is a near tie that depends on the latency basis.
-  - *Basis 2 (All Recorded Runs Grand Average Latency: 120B = 4.4012s, 20B = 5.0046s)*:
-    - **Winner under all-runs average**: **`code-worker-01` (120B) WINS decisively** with a score of **0.4316** vs 20B's **0.2337**, because 120B achieves both lower grand average latency ($4.40\text{s}$ vs $5.00\text{s}$) and near-perfect reputation ($0.9722$ vs $0.3684$).
-- **Loose Deadline ($30.0\text{s}, \lambda_t = 0.0$)**:
-  - `code-worker-02` (20B, $N=35$): $S_{\text{price}} = 0.4133, S_{\text{rep}} = 0.3684 \implies \text{Composite} = \mathbf{0.4043}$.
-  - `code-worker-01` (120B, $N=33$): $S_{\text{price}} = 0.2000, S_{\text{rep}} = 0.9722 \implies \text{Composite} = \mathbf{0.3544}$.
-  - **Outcome**: **`code-worker-02` (20B) WINS**. When deadline pressure is zero, price weight dominates ($0.80$), allowing 20B's cheaper $0.22 bid to win the initial contract.
+#### Unified Continuous Urgency Scorer & Weight Invariant Scheme
+All bid evaluations use the unified continuous $\lambda_t$ urgency model (`broker/deadline_scorer.py` and `broker/bid_scorer.py`), bounding weights to strictly sum to $1.0000$ across all deadlines $t \in [T_{\min}, T_{\max}]$:
+- **Urgency Parameter**: $\lambda_t = \text{clamp}\left(\frac{T_{\max} - t}{T_{\max} - T_{\min}}, 0.0, 1.0\right)$ where $T_{\min} = 6.0\text{s}$ (tight) and $T_{\max} = 30.0\text{s}$ (relaxed).
+- **Normalized Weights Invariant**:
+  $$W_{\text{rep}} = 0.20, \quad W_{\text{speed}} = 0.80 \times \lambda_t, \quad W_{\text{price}} = 0.80 \times (1.0 - \lambda_t)$$
+  $$\text{Invariant: } W_{\text{speed}} + W_{\text{price}} + W_{\text{rep}} \equiv 1.0000 \quad (\forall \lambda_t \in [0.0, 1.0])$$
+- **Score Formulations**:
+  - Price Score: $S_{\text{price}} = \max\left(0.0, 1.0 - \frac{\text{Bid}_{\text{USD}}}{\text{MaxBudget}_{\text{USD}}}\right)$ (at $\text{MaxBudget} = \$0.50$: 120B = $0.4000$, 20B = $0.5600$).
+  - Speed Score (Clamped at 0): $S_{\text{speed}} = \max\left(0.0, 1.0 - \frac{\text{Latency}}{\text{Deadline}}\right)$. Clamping guarantees workers that breach deadlines receive $0.0000$ speed utility rather than negative scores.
+  - Bayesian Reputation: $S_{\text{rep}} = \frac{\alpha}{\alpha + \beta}$ computed from the recorded live benchmark ($N_{\text{live}} = 30$).
+
+##### Price Score Formula Comparison & Why the Loose-Deadline Winner Flipped
+The earlier loose-deadline win for the 20B came from using a min-max price normalization formula rather than just changes in the underlying data:
+- **Formula A (Min-Max Normalization)**:
+  $$S_{\text{price, min-max}} = \frac{P_{\max} - \text{bid}}{P_{\max} - P_{\min}}$$
+  In a two-bid auction where `code-worker-01` (120B) bids $\$0.30$ and `code-worker-02` (20B) bids $\$0.22$, min-max normalization assigns 20B a price score of $\frac{0.30 - 0.22}{0.30 - 0.22} = \mathbf{1.0000}$ and 120B a price score of $\frac{0.30 - 0.30}{0.30 - 0.22} = \mathbf{0.0000}$. This creates a full $1.0000$ score spread over an $8¢$ price difference, causing the 20B to win whenever price weight exceeded just $41.1\%$.
+- **Formula B (Budget-Relative Ceiling Normalization — Production Formula)**:
+  $$S_{\text{price, budget}} = \max\left(0.0, 1.0 - \frac{\text{Bid}_{\text{USD}}}{\text{MaxBudget}_{\text{USD}}}\right)$$
+  At $\text{MaxBudget} = \$0.50$, 120B scores $1.0 - 0.30/0.50 = \mathbf{0.4000}$ and 20B scores $1.0 - 0.22/0.50 = \mathbf{0.5600}$. The score gap is proportionally bounded to $0.1600$.
+
+**Why Formula B is Used & Design Tradeoffs**: Formula B is a documented design choice with deliberate tradeoffs: budget-relative price scoring shrinks price differences as the buyer's max budget grows (for example, an $8¢$ price difference yields a noticeable $0.1600$ score spread when the budget cap is $\$0.50$, but shrinks to a negligible $0.0053$ spread when the budget cap is $\$15.00$, making large-budget procurements almost purely reliability- and deadline-driven, while small-budget tasks remain cost-sensitive). Min-max normalization was rejected because it is pathological in small agent procurement auctions—if two workers bid $\$0.299$ and $\$0.300$, min-max swings scores from $1.0$ to $0.0$, penalizing a fractional-cent difference as an absolute failure. Budget-relative normalization scales savings proportionally against the buyer's authorized capital ceiling.
+
+Under Formula B, with empirical Bayesian reputations ($R_{\text{120B}} = 0.9697$, $R_{\text{20B}} = 0.2727$ from $N=30$ live runs), the reputation gap ($0.9697 - 0.2727 = 0.6970$) at $W_{\text{rep}} = 0.20$ costs $0.1394$. Because 20B's maximum price advantage is $0.80 \times 0.1600 = 0.1280$, **reputation outweighs price unless price weight exceeds about 81%**. Both outcomes are near ties:
+
+- **Tight Deadline ($6.0\text{s}$, $\lambda_t = 1.0 \implies W_{\text{speed}}=0.80, W_{\text{price}}=0.00, W_{\text{rep}}=0.20$)**:
+  - `code-worker-01` (120B, $N=30$, Latency $5.67\text{s}$): $S_p = 0.4000, S_s = 0.0551, S_r = 0.9697 \implies \text{Composite} = \mathbf{0.2379}$.
+  - `code-worker-02` (20B, $N=30$, Latency $4.70\text{s}$): $S_p = 0.5600, S_s = 0.2173, S_r = 0.2727 \implies \text{Composite} = \mathbf{0.2279}$.
+  - **Outcome**: Near tie ($0.2379$ vs $0.2279$, margin **+0.0100**).
+  - *Latency Sensitivity*: Under All-30 Runs Average Latency ($5.62\text{s}$ vs $4.87\text{s}$), 120B scores $0.2447$ vs 20B's $0.2045$ ($+0.0402$).
+- **Loose Deadline ($30.0\text{s}$, $\lambda_t = 0.0 \implies W_{\text{speed}}=0.00, W_{\text{price}}=0.80, W_{\text{rep}}=0.20$)**:
+  - `code-worker-01` (120B, $N=30$): $S_p = 0.4000, S_s = 0.0000, S_r = 0.9697 \implies \text{Composite} = \mathbf{0.5139}$.
+  - `code-worker-02` (20B, $N=30$): $S_p = 0.5600, S_s = 0.0000, S_r = 0.2727 \implies \text{Composite} = \mathbf{0.5025}$.
+  - **Outcome**: Near tie ($0.5139$ vs $0.5025$, margin **+0.0114**).
+
+##### Sensitivity Table Across Both Price-Score Formulas
+The table below compares candidate outcomes under Formula B (Budget-Relative) versus Formula A (Min-Max) across price weights $W_p \in [0.10, 0.90]$ with $W_s = 0.00$ and $W_r = 1.0 - W_p$:
+
+| Price Weight ($W_p$) | Rep Weight ($W_r$) | Formula B (Budget-Rel) 120B / 20B | Formula B Winner | Formula A (Min-Max) 120B / 20B | Formula A Winner |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **0.10** | 0.90 | 0.9127 / 0.3014 | 120B (+0.6113) | 0.8727 / 0.3454 | 120B (+0.5273) |
+| **0.30** | 0.70 | 0.7988 / 0.3589 | 120B (+0.4399) | 0.6788 / 0.4909 | 120B (+0.1879) |
+| **0.4107 (Min-Max Crossover)** | 0.5893 | 0.7352 / 0.3908 | 120B (+0.3444) | 0.5714 / 0.5714 | **EXACT TIE (0.0000)** |
+| **0.50** | 0.50 | 0.6849 / 0.4164 | 120B (+0.2685) | 0.4849 / 0.6364 | **20B WINS (+0.1515)** |
+| **0.70** | 0.30 | 0.5709 / 0.4738 | 120B (+0.0971) | 0.2909 / 0.7818 | **20B WINS (+0.4909)** |
+| **0.80 (λ_t Scheme Max)** | **0.20** | **0.5139 / 0.5025** | **120B (+0.0114 near tie)** | 0.1939 / 0.8545 | **20B WINS (+0.6606)** |
+| **0.8133 (Budget Crossover)** | **0.1867** | **0.5063 / 0.5063** | **EXACT TIE (0.0000)** | 0.1810 / 0.8643 | **20B WINS (+0.6833)** |
+| **0.85** | 0.15 | 0.4855 / 0.5169 | **20B WINS (+0.0314)** | 0.1455 / 0.8909 | **20B WINS (+0.7454)** |
+| **0.90** | 0.10 | 0.4570 / 0.5313 | **20B WINS (+0.0743)** | 0.0970 / 0.9273 | **20B WINS (+0.8303)** |
+
+*Summary*: Under Formula A, 20B won as soon as price weight exceeded $41.1\%$. Under the production Formula B, **reputation outweighs price unless price weight exceeds about 81%** ($W_p > 81.33\%$). At standard continuous lambda weights ($\lambda_t = 0 \implies W_p = 0.80, W_r = 0.20$), the 120B model wins by a near-tie margin of $0.0114$.
+
 - **Rogue Adversarial Underbidding**: The rogue fixture calculates its bid via `workers/rogue_worker.py:53`:
   $$\text{underbid\_price} = \text{round}(\max(0.15, \min(0.20, \text{max\_bid} \times 0.36)), 2)$$
   At $\text{max\_bid} = \$0.50$, $0.50 \times 0.36 = \$0.18$. With claim of $1.0\text{s}$ latency and unpenalized $\text{Beta}(2, 1) = 0.6667$ prior, rogue wins the initial auction ($\text{Composite} = 0.7645$), is caught by the hidden test sandbox, paid $\$0.00$, and dynamically reallocated to `code-worker-01`.
@@ -212,21 +254,23 @@ The following architectural capabilities are explicitly out of scope for the cur
 
 ---
 
-## 9. Polaris UI Provenance & Design System Attribution
+## 9. Polaris UI Provenance & Submission Period Architecture Disclosures
 
-The frontend command centre dashboard (`dashboard/index.html`) adapts the visual aesthetic and component architecture of the Polaris design system (from `C:\Users\aarav.SOMEGUYWITHPRET\Documents\emsearch-polaris\frontend`):
-- **Core Dark Palette & Design Tokens**: Directly adapted from `src/design-system/tokens.css` and `src/index.css`:
-  - `--theme-bg: #09090b` / `#000000` (deep space canvas)
-  - `--theme-surface: #121214` (liquid glass card surface)
-  - `--theme-surface-subtle: #1c1c1e` (elevated control background)
-  - `--theme-border: rgba(255, 255, 255, 0.08)` and `--theme-border-strong: rgba(255, 255, 255, 0.16)`
-  - `--color-primary-500: #5e6ad2` and hazard colors (`--color-hazard-critical: #ff453a`, `--color-hazard-high: #ff9f0a`)
-- **Volumetric Beams Background**: Implements the procedural vertical light column shader directly matching Polaris `Beams.tsx` (`speed: 2, noiseIntensity: 1.75, scale: 0.2`) with 35 drifting light planes, blurred with `filter: blur(30px); opacity: 0.8;` over `#09090b` obsidian canvas and `.ambient-orb` reactive glow.
-- **Floating Dock Navigation Sidebar**: 28px rounded floating sidebar (`rounded-[28px]`, `w-16` expandable to `w-64` on hover) with glowing status indicators, navigation tabs, and operator avatar.
-- **Unified Header & Dynamic Island**: Header top bar with search filter, live WebSocket status indicator, and central Dynamic Island pill that expands to broadcast live procurement states (`COMMAND CENTRE // OPERATIONS NOMINAL`, `AUCTION`, `VERIFYING`, `SETTLED`).
-- **Horizontal Bayesian Reputation & Worker Capability Registry**: Fully replaces the canvas map with a full-width horizontal capability registry spanning across the entire main viewport, complete with category filter tabs (`All Workers`, `Code Gen`, `Document OCR`, `LLM Synthesis`, `Fixtures`), showing empirical run counts ($N=33$ for 120B, $N=35$ for 20B), Beta posteriors, pass rates, measured latencies, bid prices, and cold-start caps.
-- **Multi-Page Polaris Routing**: Dedicated views for Command Centre, Incidents & Threats (forensic dossier and Gate 4 leap-year diff trace), Fleet Telemetry (real-time ping grid for all 7 microservice ports), Audit Ledger (block explorer with 28 verified blocks against latest disk anchor), and Settings & Policies.
-- **ProcureAgent Engine Differentiation**: All underlying autonomous capability procurement protocols, capability broker matching, Bayesian reputation updating, sandboxed Python code execution, Tesseract OCR verification, PayPal Sandbox API integrations, and tamper-evident SHA-256 hash chaining are entirely native to ProcureAgent.
+The frontend command centre dashboard (`dashboard/index.html`) adapts the visual aesthetic, design tokens, and layout architecture from an earlier personal project (`emsearch-polaris/frontend` at `C:\Users\aarav.SOMEGUYWITHPRET\Documents\emsearch-polaris\frontend`):
+- **Reused Design Assets & Styles**:
+  - `src/design-system/tokens.css` (color tokens `--theme-bg: #09090b`, `--theme-surface: #121214`, `--theme-border: rgba(255,255,255,0.08)`, and typography)
+  - `src/index.css` (liquid glass backdrop blur surfaces, borders, elevated control backgrounds)
+  - `src/components/ui/Beams.tsx` (procedural light column shader geometry and simplex noise concept)
+- **Repo Initialization & Development Scope**:
+  - The repository was initialized on **October 29th, 2026 at 15:40:22 +0530** (commit `0537dde`) after earlier local prototype code existed. (The `11:21` timestamp noted in earlier scratch notes was an execution log time, not the git author date).
+  - **Built During the Submission Period**: Everything else in this codebase was conceived and built during the hackathon submission period (October 29–31, 2026), including:
+    - The asynchronous Job Request Packet (JRP) capability manifest broker (`broker/`)
+    - The atomic budget reservation manager with SQLite `BEGIN IMMEDIATE` transactions (`orchestrator/budget_manager.py`)
+    - The two-stage verification engine with subprocess sandbox execution (`orchestrator/verifier.py`)
+    - Dynamic Bayesian $\text{Beta}(2,1)$ reputation scoring with cold-start caps (`orchestrator/reputation.py`)
+    - All 6 worker microservice clients (Groq Cloud 120B/20B LLMs, Tesseract 5.5 OCR, and adversary)
+    - Live PayPal Sandbox Payouts REST API v1 integration with batch polling (`orchestrator/treasury.py`)
+    - Append-only tamper-evident SHA-256 audit hash-chaining (`audit/run_log.py`)
 
 ---
 

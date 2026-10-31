@@ -73,8 +73,10 @@ def score_bids_with_deadline(bids: List[Dict[str, Any]], deadline_sec: float) ->
         bid_usd = b.get("bid_usd", max_price)
         latency = b.get("measured_latency", b.get("estimated_seconds", max_seconds))
 
-        price_score = round(1.0 - (bid_usd / (max_price * 1.25)), 4)
-        speed_score = round(1.0 - (latency / (max_seconds * 1.25)), 4)
+        max_budget = b.get("max_budget_usd", max_price)
+        price_score = max(0.0, round(1.0 - (bid_usd / max_budget), 4))
+        # Speed score clamped at 0.0 if latency exceeds deadline
+        speed_score = max(0.0, round(1.0 - (latency / deadline_sec), 4))
 
         composite = round(
             w_price * price_score +

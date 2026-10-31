@@ -1,0 +1,51 @@
+{
+  "120b": {
+    "worker_id": "code-worker-01",
+    "n_samples": 30,
+    "total_records_with_backfill": 53,
+    "backfilled_count": 23,
+    "passes": 30,
+    "failures": 0,
+    "pass_rate": 1.0,
+    "alpha": 32.0,
+    "beta": 1.0,
+    "reputation_score": 0.9697,
+    "avg_latency_all": 5.6185,
+    "avg_latency_recent_10": 5.6696,
+    "avg_token_cost": 0.001884,
+    "is_cold_start": false,
+    "allocation_cap_usd": 15.0
+  },
+  "20b": {
+    "worker_id": "code-worker-02",
+    "n_samples": 30,
+    "total_records_with_backfill": 55,
+    "backfilled_count": 25,
+    "passes": 7,
+    "failures": 23,
+    "pass_rate": 0.2333,
+    "alpha": 9.0,
+    "beta": 24.0,
+    "reputation_score": 0.2727,
+    "avg_latency_all": 4.8745,
+    "avg_latency_recent_10": 4.6963,
+    "avg_token_cost": 0.00163,
+    "is_cold_start": false,
+    "allocation_cap_usd": 15.0
+  },
+  "run_counts_by_source": {
+    "code-worker-01": {
+      "scripts/benchmark_10_runs_code_workers.py [backfilled]": 10,
+      "scripts/test_reassignment_scenario.py [backfilled]": 3,
+      "scripts/benchmark_interleaved_code_workers.py [backfilled]": 10,
+      "scripts/run_live_30_benchmark.py [live]": 30
+    },
+    "code-worker-02": {
+      "scripts/benchmark_10_runs_code_workers.py [backfilled]": 10,
+      "scripts/test_reassignment_scenario.py [backfilled]": 5,
+      "scripts/benchmark_interleaved_code_workers.py [backfilled]": 10,
+      "scripts/run_live_30_benchmark.py [live]": 30
+    }
+  },
+  "timestamp": "2026-10-31T06:24:10.198662+00:00"
+}

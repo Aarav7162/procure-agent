@@ -1,0 +1,32 @@
+[
+  {
+    "segment": "card_intro",
+    "duration_sec": 8.0,
+    "description": "Intro Title Card: Problem, Audience & Architecture"
+  },
+  {
+    "segment": "clip1_rogue_blocked_35s.webm",
+    "duration_sec": 36.0,
+    "batch_id": "NONE ($0.00 Spent - BLOCKED)"
+  },
+  {
+    "segment": "clip2_reassignment_live_payout_35s.webm",
+    "duration_sec": 36.0,
+    "batch_id": "NUFGNUMSUTJ7W (PayPal Sandbox Batch ID)"
+  },
+  {
+    "segment": "clip3_verify_chain_15s.webm",
+    "duration_sec": 16.3,
+    "batch_id": "N/A (Chain Proof Verification \u00b7 30 Blocks Valid)"
+  },
+  {
+    "segment": "clip4_impossible_task_zero_spend_20s.webm",
+    "duration_sec": 20.7,
+    "batch_id": "NONE ($0.00 Reserved, $0.00 Spent - No Capable Workers)"
+  },
+  {
+    "segment": "card_outro",
+    "duration_sec": 7.0,
+    "description": "Outro Summary Card: Hash Chain Verification & Proofs"
+  }
+]
