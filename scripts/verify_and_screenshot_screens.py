@@ -42,11 +42,21 @@ async def main():
             await asyncio.sleep(1.0)
 
             # 1. Overview Screen
-            await page.evaluate("showScreen('overview')")
-            await asyncio.sleep(0.3)
+            await page.evaluate("showScreen('command')")
+            await asyncio.sleep(0.5)
             out_file = os.path.join(SCREENSHOTS_DIR, f"overview_{width}.png")
             await page.screenshot(path=out_file)
             print(f"Captured: {out_file}")
+
+            # 1b. Expanded Sidebar State
+            if width == 1440:
+                await page.evaluate("document.getElementById('polaris-dock').classList.add('pinned')")
+                await asyncio.sleep(0.3)
+                out_file_exp = os.path.join(SCREENSHOTS_DIR, "polaris_sidebar_expanded.png")
+                await page.screenshot(path=out_file_exp)
+                print(f"Captured: {out_file_exp}")
+                await page.evaluate("document.getElementById('polaris-dock').classList.remove('pinned')")
+                await asyncio.sleep(0.2)
 
             # 2. Purchases Screen (Receipt)
             await page.evaluate("showScreen('purchases')")

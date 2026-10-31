@@ -101,6 +101,30 @@ async def get_three_js():
     return HTMLResponse(content="// Three.js local file missing", status_code=404)
 
 
+@app.get("/beams.js")
+async def get_beams_js():
+    fpath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "beams.js"))
+    if os.path.exists(fpath):
+        return FileResponse(fpath, media_type="application/javascript")
+    return HTMLResponse(content="// beams.js missing", status_code=404)
+
+
+@app.get("/polaris_logo.svg")
+async def get_polaris_logo_svg():
+    fpath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "polaris_logo.svg"))
+    if os.path.exists(fpath):
+        return FileResponse(fpath, media_type="image/svg+xml")
+    return HTMLResponse(content="<!-- not found -->", status_code=404)
+
+
+@app.get("/polaris_logo_new.png")
+async def get_polaris_logo_png():
+    fpath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard", "polaris_logo_new.png"))
+    if os.path.exists(fpath):
+        return FileResponse(fpath, media_type="image/png")
+    return HTMLResponse(content="<!-- not found -->", status_code=404)
+
+
 class TaskRequest(BaseModel):
     description: str
     max_budget_usd: float = 15.0

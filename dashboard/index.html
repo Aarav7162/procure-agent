@@ -4,30 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ProcureAgent — Polaris Autonomous Capability Procurement</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><polygon points='12 2 22 21 12 17 2 21 12 2'/></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'><circle cx='12' cy='12' r='10'/></svg>">
   <style>
     /* ==========================================================================
        POLARIS STRICT OBSIDIAN & LIQUID GLASS TOKENS
        ========================================================================== */
     :root {
-      --bg-space: #09090b;
-      --bg-panel: rgba(18, 18, 24, 0.78);
-      --bg-panel-solid: #121218;
-      --bg-card: rgba(22, 22, 30, 0.72);
-      --bg-card-hover: rgba(28, 28, 38, 0.85);
-      --bg-subtle: rgba(255, 255, 255, 0.04);
-      --border-glass: rgba(255, 255, 255, 0.08);
-      --border-glass-bright: rgba(255, 255, 255, 0.16);
+      --bg-space: #070709;
+      --bg-glass-panel: rgba(16, 16, 22, 0.52);
+      --bg-glass-card: rgba(22, 22, 30, 0.45);
+      --bg-glass-inner: rgba(8, 8, 12, 0.48);
+      --border-glass: rgba(255, 255, 255, 0.09);
+      --border-glass-bright: rgba(255, 255, 255, 0.18);
       --text-white: #ffffff;
       --text-bright: #f4f4f5;
       --text-dim: #a1a1aa;
       --text-muted: #71717a;
-      --accent-indigo: #6366f1;
-      --accent-indigo-light: #818cf8;
-      --accent-cyan: #38bdf8;
       --accent-emerald: #10b981;
       --accent-amber: #f59e0b;
       --accent-rose: #ef4444;
+      --accent-blue: #ffffff;
       --font-polaris: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
@@ -45,10 +41,9 @@
       overflow-x: hidden;
       line-height: 1.45;
       -webkit-font-smoothing: antialiased;
-      user-select: none;
     }
 
-    /* Full-Screen React Bits Beams WebGL2 Canvas */
+    /* Fullscreen React Bits Beams WebGL2 Canvas (White/Silver Monochrome) */
     #beams-canvas {
       position: fixed;
       inset: 0;
@@ -56,7 +51,18 @@
       height: 100vh;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.65;
+      opacity: 1.0;
+    }
+
+    /* Viewport-Wide Ambient Liquid Glass Frosted Layer */
+    .ambient-glass-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
     }
 
     /* ==========================================================================
@@ -69,9 +75,9 @@
       right: 0;
       height: 56px;
       z-index: 1000;
-      background: rgba(10, 10, 14, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(10, 10, 14, 0.65);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border-bottom: 1px solid var(--border-glass);
       display: flex;
       align-items: center;
@@ -79,14 +85,15 @@
       padding: 0 20px;
     }
 
-    /* Left: Search Bar with ⌘K badge */
+    /* Left: Search Box with ⌘K badge */
     .topbar-search {
       display: flex;
       align-items: center;
       gap: 10px;
       width: 320px;
       height: 36px;
-      background: rgba(24, 24, 30, 0.7);
+      background: rgba(18, 18, 24, 0.65);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 10px;
       padding: 0 12px;
@@ -96,7 +103,7 @@
     }
     .topbar-search:hover {
       border-color: var(--border-glass-bright);
-      background: rgba(30, 30, 38, 0.85);
+      background: rgba(25, 25, 34, 0.8);
     }
     .topbar-search input {
       background: transparent;
@@ -125,10 +132,10 @@
       align-items: center;
       gap: 9px;
       background: linear-gradient(180deg, rgba(28, 28, 36, 0.95) 0%, rgba(12, 12, 16, 0.98) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 9999px;
       padding: 6px 18px 6px 10px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.25);
       cursor: pointer;
       transition: transform 0.2s ease;
     }
@@ -139,8 +146,8 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #818cf8 0%, #4338ca 60%, #1e1b4b 100%);
-      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, #94a3b8 60%, #1e293b 100%);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.5);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -149,8 +156,8 @@
       width: 12px;
       height: 12px;
       fill: none;
-      stroke: #fff;
-      stroke-width: 2;
+      stroke: #000;
+      stroke-width: 2.5;
     }
     .brand-pill-text {
       font-size: 13px;
@@ -159,7 +166,7 @@
       letter-spacing: 0.02em;
     }
 
-    /* Right: Workspace, Orbit/Stack Status, UTC Clock, Bell */
+    /* Right: Workspace, Orbit / Stack status, UTC Clock, Bell */
     .topbar-right {
       display: flex;
       align-items: center;
@@ -171,7 +178,7 @@
       gap: 8px;
       font-size: 12px;
       color: var(--text-dim);
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-glass);
       border-radius: 8px;
       padding: 4px 10px;
@@ -191,9 +198,9 @@
       gap: 7px;
       font-size: 12px;
       font-weight: 500;
-      background: rgba(30, 41, 59, 0.5);
-      border: 1px solid rgba(96, 165, 250, 0.3);
-      color: #93c5fd;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
       border-radius: 9999px;
       padding: 4px 12px;
     }
@@ -209,7 +216,7 @@
       font-size: 12px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       color: var(--text-dim);
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-glass);
       border-radius: 8px;
       padding: 4px 10px;
@@ -226,7 +233,7 @@
       width: 32px;
       height: 32px;
       border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-glass);
       display: flex;
       align-items: center;
@@ -251,76 +258,131 @@
     }
 
     /* ==========================================================================
-       2. POLARIS FLOATING CAPSULE SIDEBAR DOCK
+       2. EXPANDABLE POLARIS CAPSULE SIDEBAR DOCK (Exact 1:1)
        ========================================================================== */
     .polaris-dock {
       position: fixed;
       left: 16px;
-      top: 72px;
-      bottom: 16px;
-      width: 56px;
-      background: rgba(18, 18, 24, 0.85);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      top: 50%;
+      transform: translateY(-50%);
+      height: 680px;
+      max-height: calc(100vh - 32px);
+      width: 64px;
+      background: rgba(18, 18, 20, 0.85);
+      backdrop-filter: blur(60px);
+      -webkit-backdrop-filter: blur(60px);
       border: 1px solid var(--border-glass);
-      border-radius: 9999px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.03);
+      border-radius: 28px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
+      padding: 16px 0;
+      z-index: 950;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, border-radius 0.3s ease, background 0.25s ease;
+      overflow: hidden;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    /* Expand on hover or pinned */
+    .polaris-dock:hover,
+    .polaris-dock.pinned {
+      width: 256px;
+      padding: 16px 12px;
+      background: rgba(18, 18, 22, 0.95);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    }
+
+    /* Top Brand Header inside Sidebar */
+    .sidebar-header-box {
+      display: flex;
       align-items: center;
-      padding: 12px 6px;
-      gap: 8px;
-      z-index: 900;
+      gap: 12px;
+      padding: 0 4px 6px 4px;
+      cursor: pointer;
     }
     .dock-emblem {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
       border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border-glass);
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .dock-emblem:hover {
-      background: rgba(99, 102, 241, 0.15);
-      border-color: rgba(99, 102, 241, 0.35);
+      flex-shrink: 0;
     }
     .dock-emblem svg {
       width: 20px;
       height: 20px;
-      stroke: var(--accent-indigo-light);
+      stroke: #fff;
       fill: none;
       stroke-width: 2;
     }
+    .sidebar-header-text {
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateX(-8px);
+      transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
+    }
+    .polaris-dock:hover .sidebar-header-text,
+    .polaris-dock.pinned .sidebar-header-text {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .sidebar-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .sidebar-sub {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
     .dock-sep {
-      width: 28px;
+      width: 100%;
       height: 1px;
       background: var(--border-glass);
       margin: 4px 0;
     }
+
     .dock-icons {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 6px;
+      gap: 4px;
       flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
+
     .dock-icon-btn {
       width: 40px;
       height: 40px;
-      border-radius: 12px;
+      min-height: 40px;
+      border-radius: 10px;
       background: transparent;
       border: 1px solid transparent;
-      color: var(--text-muted);
+      color: var(--text-dim);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
       position: relative;
+      flex-shrink: 0;
+    }
+    .polaris-dock:hover .dock-icon-btn,
+    .polaris-dock.pinned .dock-icon-btn {
+      width: 100%;
+      justify-content: flex-start;
+      padding: 0 10px;
+      gap: 12px;
     }
     .dock-icon-btn:hover {
       color: var(--text-white);
@@ -328,54 +390,83 @@
     }
     .dock-icon-btn.active {
       background: #27272a;
-      border-color: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.14);
       color: var(--text-white);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
     .dock-icon-btn svg {
       width: 19px;
       height: 19px;
+      min-width: 19px;
       stroke: currentColor;
       fill: none;
       stroke-width: 1.8;
       stroke-linecap: round;
       stroke-linejoin: round;
+      flex-shrink: 0;
     }
-    .dock-tooltip {
-      position: absolute;
-      left: 54px;
-      background: #18181b;
-      border: 1px solid var(--border-glass);
-      color: var(--text-white);
-      font-size: 11px;
+    .dock-text-label {
+      font-size: 13px;
       font-weight: 500;
-      padding: 5px 10px;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-      white-space: nowrap;
-      pointer-events: none;
+      color: var(--text-dim);
       opacity: 0;
-      transform: translateX(-4px);
-      transition: all 0.15s ease;
-      z-index: 1000;
+      transform: translateX(-6px);
+      transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
     }
-    .dock-icon-btn:hover .dock-tooltip {
+    .dock-icon-btn.active .dock-text-label {
+      color: #fff;
+      font-weight: 600;
+    }
+    .polaris-dock:hover .dock-text-label,
+    .polaris-dock.pinned .dock-text-label {
       opacity: 1;
       transform: translateX(0);
+    }
+
+    /* Bottom: Log Out & User Profile Card */
+    .sidebar-footer-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 4px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-glass);
+      cursor: pointer;
     }
     .dock-avatar-circle {
       width: 36px;
       height: 36px;
+      min-width: 36px;
       border-radius: 50%;
       background: #27272a;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: var(--text-white);
       font-size: 12px;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .user-footer-details {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      opacity: 0;
+      transition: opacity 0.2s ease 0.05s;
+    }
+    .polaris-dock:hover .user-footer-details,
+    .polaris-dock.pinned .user-footer-details {
+      opacity: 1;
+    }
+    .user-name-line {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .user-email-line {
+      font-size: 10px;
+      color: var(--text-muted);
     }
 
     /* ==========================================================================
@@ -399,7 +490,7 @@
       font-weight: 700;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      color: var(--accent-cyan);
+      color: var(--text-dim);
       margin-bottom: 4px;
     }
     .page-title-row {
@@ -428,15 +519,15 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      background: rgba(30, 41, 59, 0.65);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(24, 24, 32, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       color: #fff;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
       transition: all 0.2s ease;
     }
     .btn-polaris-action:hover {
-      background: rgba(51, 65, 85, 0.85);
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(36, 36, 48, 0.85);
+      border-color: rgba(255, 255, 255, 0.28);
       transform: translateY(-1px);
     }
 
@@ -454,7 +545,7 @@
     }
 
     /* ==========================================================================
-       4. COMMAND CENTRE: DUAL-COLUMN POLARIS LAYOUT
+       4. COMMAND CENTRE: DUAL-COLUMN POLARIS LIQUID GLASS LAYOUT
        ========================================================================== */
     .command-grid {
       display: grid;
@@ -467,21 +558,22 @@
       }
     }
 
-    /* Left Events / Active Bounties Card (like Polaris Risk Events panel) */
+    /* Liquid Glass Panels */
     .polaris-panel {
-      background: var(--bg-panel);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: var(--bg-glass-panel);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border: 1px solid var(--border-glass);
       border-radius: 20px;
       padding: 20px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.12);
     }
     .panel-search {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(0, 0, 0, 0.35);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 10px;
       padding: 8px 12px;
@@ -499,7 +591,8 @@
     }
     .segmented-tabs {
       display: flex;
-      background: rgba(0, 0, 0, 0.35);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 10px;
       padding: 3px;
@@ -547,7 +640,7 @@
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--border-glass);
       color: var(--text-dim);
       cursor: pointer;
@@ -555,12 +648,13 @@
     .filter-pill.active {
       background: #27272a;
       color: #fff;
-      border-color: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.16);
     }
 
     /* Event / Bounty Card */
     .bounty-card-item {
-      background: rgba(0, 0, 0, 0.25);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 14px;
       padding: 14px;
@@ -569,13 +663,13 @@
       transition: all 0.2s ease;
     }
     .bounty-card-item:hover {
-      background: rgba(255, 255, 255, 0.03);
-      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-glass-bright);
       transform: translateY(-1px);
     }
     .bounty-card-item.selected {
-      border-color: var(--accent-indigo);
-      background: rgba(99, 102, 241, 0.06);
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.06);
     }
     .card-tags {
       display: flex;
@@ -594,7 +688,6 @@
     .polaris-tag.critical { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
     .polaris-tag.success { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
     .polaris-tag.neutral { background: rgba(255, 255, 255, 0.06); color: var(--text-dim); border: 1px solid var(--border-glass); }
-    .polaris-tag.blue { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); }
 
     .bounty-item-title {
       font-size: 13px;
@@ -624,14 +717,16 @@
       }
     }
     .kpi-box {
-      background: var(--bg-panel);
-      backdrop-filter: blur(20px);
+      background: var(--bg-glass-panel);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border: 1px solid var(--border-glass);
       border-radius: 16px;
       padding: 16px;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.1);
     }
     .kpi-top {
       display: flex;
@@ -671,13 +766,13 @@
        5. INCIDENT DOSSIER / ORDER RECEIPT (1:1 Polaris Incident Card Layout)
        ========================================================================== */
     .dossier-card {
-      background: var(--bg-panel);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: var(--bg-glass-panel);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border: 1px solid var(--border-glass);
       border-radius: 20px;
       padding: 24px 28px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.14);
     }
     .dossier-top {
       display: flex;
@@ -731,7 +826,8 @@
       margin-bottom: 20px;
     }
     .dual-box {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 14px;
       padding: 16px;
@@ -760,7 +856,8 @@
 
     /* Distance / Budget Progress Slider */
     .slider-track-box {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 12px;
       padding: 12px 16px;
@@ -777,7 +874,8 @@
     /* Tactical Playbook Segmented Controls */
     .playbook-tabs {
       display: flex;
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 10px;
       padding: 4px;
@@ -817,9 +915,9 @@
       cursor: pointer;
     }
     .phase-pill.active {
-      background: rgba(99, 102, 241, 0.15);
-      border-color: rgba(99, 102, 241, 0.35);
-      color: var(--accent-indigo-light);
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #fff;
     }
 
     /* Tables */
@@ -865,8 +963,9 @@
       gap: 18px;
     }
     .fleet-card {
-      background: var(--bg-panel);
-      backdrop-filter: blur(20px);
+      background: var(--bg-glass-panel);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
       border: 1px solid var(--border-glass);
       border-radius: 18px;
       padding: 20px;
@@ -874,12 +973,14 @@
       flex-direction: column;
       justify-content: space-between;
       gap: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
     }
     .fleet-stats-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--bg-glass-inner);
+      backdrop-filter: blur(16px);
       border: 1px solid var(--border-glass);
       border-radius: 12px;
       padding: 12px;
@@ -890,7 +991,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       z-index: 2000;
       display: none;
       align-items: center;
@@ -900,11 +1001,12 @@
     .modal-box {
       width: 90%;
       max-width: 640px;
-      background: rgba(18, 18, 24, 0.95);
+      background: rgba(16, 16, 22, 0.95);
+      backdrop-filter: blur(32px);
       border: 1px solid var(--border-glass-bright);
       border-radius: 20px;
       padding: 28px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
     }
 
     /* Toast */
@@ -931,12 +1033,520 @@
     }
   </style>
   <script src="three.min.js"></script>
-  <script src="beams.js"></script>
+  <script>
+/**
+ * dashboard/beams.js
+ * -------------------
+ * Official WebGL2 Beams engine from @react-bits/Beams-TS-TW (React Bits).
+ * Glossy ribbons that ripple in the dark and catch the light following the cursor.
+ * 100% local, dependency-free WebGL2 shader implementation.
+ */
+
+(function (global) {
+  const QUAD_VERTEX = `#version 300 es
+in vec2 aPosition;
+void main() {
+  gl_Position = vec4(aPosition, 0.0, 1.0);
+}`;
+
+  const FIELD = `#version 300 es
+precision highp float;
+uniform vec2 uView;
+uniform vec2 uScale;
+uniform vec2 uTurn;
+uniform float uTime;
+uniform float uWidth;
+uniform float uWave;
+uniform float uDepth;
+uniform float uRough;
+uniform float uSeed;
+uniform float uTwist;
+uniform vec3 uLight;
+uniform float uFill;
+uniform float uCamera;
+uniform vec4 uPointer;
+out vec4 outColor;
+
+const float PI = 3.141592653589793;
+
+vec4 permute(vec4 x) {
+  return mod(((x * 34.0) + 1.0) * x, 289.0);
+}
+
+vec4 taylorInvSqrt(vec4 r) {
+  return 1.79284291400159 - 0.85373472095314 * r;
+}
+
+vec3 fade(vec3 t) {
+  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float cnoise(vec3 P) {
+  vec3 Pi0 = floor(P);
+  vec3 Pi1 = Pi0 + vec3(1.0);
+  Pi0 = mod(Pi0, 289.0);
+  Pi1 = mod(Pi1, 289.0);
+  vec3 Pf0 = fract(P);
+  vec3 Pf1 = Pf0 - vec3(1.0);
+  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+  vec4 iy = vec4(Pi0.yy, Pi1.yy);
+  vec4 iz0 = Pi0.zzzz;
+  vec4 iz1 = Pi1.zzzz;
+  vec4 ixy = permute(permute(ix) + iy);
+  vec4 ixy0 = permute(ixy + iz0);
+  vec4 ixy1 = permute(ixy + iz1);
+  vec4 gx0 = ixy0 / 7.0;
+  vec4 gy0 = fract(floor(gx0) / 7.0) - 0.5;
+  gx0 = fract(gx0);
+  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+  vec4 sz0 = step(gz0, vec4(0.0));
+  gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+  gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+  vec4 gx1 = ixy1 / 7.0;
+  vec4 gy1 = fract(floor(gx1) / 7.0) - 0.5;
+  gx1 = fract(gx1);
+  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+  vec4 sz1 = step(gz1, vec4(0.0));
+  gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+  gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+  vec3 g000 = vec3(gx0.x, gy0.x, gz0.x);
+  vec3 g100 = vec3(gx0.y, gy0.y, gz0.y);
+  vec3 g010 = vec3(gx0.z, gy0.z, gz0.z);
+  vec3 g110 = vec3(gx0.w, gy0.w, gz0.w);
+  vec3 g001 = vec3(gx1.x, gy1.x, gz1.x);
+  vec3 g101 = vec3(gx1.y, gy1.y, gz1.y);
+  vec3 g011 = vec3(gx1.z, gy1.z, gz1.z);
+  vec3 g111 = vec3(gx1.w, gy1.w, gz1.w);
+  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+  g000 *= norm0.x;
+  g010 *= norm0.y;
+  g100 *= norm0.z;
+  g110 *= norm0.w;
+  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+  g001 *= norm1.x;
+  g011 *= norm1.y;
+  g101 *= norm1.z;
+  g111 *= norm1.w;
+  float n000 = dot(g000, Pf0);
+  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+  float n111 = dot(g111, Pf1);
+  vec3 fade_xyz = fade(Pf0);
+  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);
+  return 2.2 * n_xyz;
+}
+
+float laneHash(float lane, float seed) {
+  return fract(sin(lane * 91.3458 + seed * 17.17) * 47453.5453);
+}
+
+float lobe(float nh, float nl, float nv, float vh, float roughness) {
+  float a = roughness * roughness;
+  float a2 = a * a;
+  float d = nh * nh * (a2 - 1.0) + 1.0;
+  float distribution = a2 / (PI * d * d);
+  float gv = nl * sqrt(nv * nv * (1.0 - a2) + a2);
+  float gl = nv * sqrt(nl * nl * (1.0 - a2) + a2);
+  float visibility = 0.5 / max(gv + gl, 0.0001);
+  float fresnel = 0.028 + 0.972 * pow(1.0 - vh, 5.0);
+  return distribution * visibility * fresnel * nl;
+}
+
+vec2 glint(float lane, vec2 local, float wave, float depth, float time, float twist, float rough, vec3 light, float fill, float camera, float seed) {
+  float along = local.y / wave - laneHash(lane, seed) * 60.0;
+  float stepVal = 0.01;
+  float slope = (cnoise(vec3(0.0, along + stepVal, time)) - cnoise(vec3(0.0, along - stepVal, time))) / (2.0 * stepVal);
+  slope *= 0.2 * depth;
+  float spin = laneHash(lane + 0.37, seed);
+  float tilt = ((spin - 0.5) * 0.5 + sin(time * 2.1 + spin * 6.2831) * 0.06) * twist;
+  vec3 normal = normalize(vec3(tilt, -slope, 1.0));
+  vec3 view = normalize(vec3(-local, camera));
+  float nv = max(dot(normal, view), 0.0001);
+  vec3 l = normalize(light);
+  vec3 halfway = normalize(l + view);
+  float core = lobe(max(dot(normal, halfway), 0.0), max(dot(normal, l), 0.0), nv, max(dot(view, halfway), 0.0), rough);
+  vec3 fillL = normalize(vec3(0.0, -light.y * 1.25, light.z));
+  vec3 fillHalf = normalize(fillL + view);
+  core += fill * lobe(max(dot(normal, fillHalf), 0.0), max(dot(normal, fillL), 0.0), nv, max(dot(view, fillHalf), 0.0), rough);
+  return vec2(core, core);
+}
+
+void main() {
+  vec2 css = gl_FragCoord.xy * uScale;
+  vec2 centered = css - uView * 0.5;
+  vec2 local = mat2(uTurn.x, -uTurn.y, uTurn.y, uTurn.x) * centered;
+
+  float across = local.x / uWidth + 0.5;
+  float lane = floor(across);
+  float u = across - lane;
+
+  vec2 value = glint(lane, local, uWave, uDepth, uTime, uTwist, uRough, uLight, uFill, uCamera, uSeed);
+
+  float pixel = max(uScale.x, uScale.y);
+  float seam = min(u, 1.0 - u) * uWidth;
+  if (seam < pixel * 1.5) {
+    float other = u < 0.5 ? lane - 1.0 : lane + 1.0;
+    float blend = 0.5 * (1.0 - smoothstep(0.0, pixel * 1.5, seam));
+    value = mix(value, glint(other, local, uWave, uDepth, uTime, uTwist, uRough, uLight, uFill, uCamera, uSeed), blend);
+  }
+
+  vec2 toPointer = css - uPointer.xy;
+  float near = exp(-dot(toPointer, toPointer) / (2.0 * uPointer.w * uPointer.w)) * uPointer.z;
+  value *= 1.0 + near * 0.8;
+  float hot = max(value.y - 0.18, 0.0);
+  outColor = vec4(value.x, value.y, min(hot, 6.0), 1.0);
+}`;
+
+  const COMPOSITE = `#version 300 es
+precision highp float;
+uniform sampler2D uField;
+uniform vec2 uResolution;
+uniform vec3 uColor;
+uniform vec3 uInk;
+uniform float uGain;
+uniform float uGlow;
+uniform float uPresence;
+uniform float uGrain;
+uniform float uFade;
+uniform float uOpacity;
+uniform float uLightMode;
+out vec4 outColor;
+
+float random(vec2 st) {
+  return fract(sin(dot(st, vec2(12.9898, 78.233))) * 43758.5453123);
+}
+
+float grainNoise(vec2 st) {
+  vec2 i = floor(st);
+  vec2 f = fract(st);
+  float a = random(i);
+  float b = random(i + vec2(1.0, 0.0));
+  float c = random(i + vec2(0.0, 1.0));
+  float d = random(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+vec3 acesFilmic(vec3 color) {
+  const mat3 inputMatrix = mat3(
+    vec3(0.59719, 0.07600, 0.02840),
+    vec3(0.35458, 0.90834, 0.13383),
+    vec3(0.04823, 0.01566, 0.83777)
+  );
+  const mat3 outputMatrix = mat3(
+    vec3(1.60475, -0.10208, -0.00327),
+    vec3(-0.53108, 1.10813, -0.07276),
+    vec3(-0.07367, -0.00605, 1.07602)
+  );
+  color = inputMatrix * (color / 0.6);
+  vec3 a = color * (color + 0.0245786) - 0.000090537;
+  vec3 b = color * (0.983729 * color + 0.4329510) + 0.238081;
+  color = outputMatrix * (a / b);
+  return clamp(color, 0.0, 1.0);
+}
+
+vec3 toSrgb(vec3 color) {
+  return mix(color * 12.92, 1.055 * pow(color, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), color));
+}
+
+float feather(float x, float edge) {
+  float t = clamp(x / max(edge, 0.0001), 0.0, 1.0);
+  return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / uResolution;
+  float radiance = textureLod(uField, uv, 0.0).r;
+  float bloom = 0.0;
+  bloom += textureLod(uField, uv, 2.0).b * 0.3;
+  bloom += textureLod(uField, uv, 3.0).b * 0.3;
+  bloom += textureLod(uField, uv, 4.0).b * 0.22;
+  bloom += textureLod(uField, uv, 5.0).b * 0.18;
+
+  float hot = textureLod(uField, uv, 0.0).g;
+  vec3 light = uColor * (radiance + bloom * uGlow) * uGain;
+  light += mix(uColor, vec3(1.0), 0.7) * hot * hot * 0.12 * uGain;
+  light *= uPresence;
+  vec3 color = toSrgb(acesFilmic(light));
+  color -= grainNoise(gl_FragCoord.xy) / 15.0 * uGrain;
+  color = max(color, 0.0);
+
+  float edge = uFade * 0.5;
+  float mask = feather(uv.x, edge) * feather(1.0 - uv.x, edge) * feather(uv.y, edge) * feather(1.0 - uv.y, edge);
+  mask *= uOpacity;
+  float dither = (random(gl_FragCoord.yx + 31.7) - 0.5) / 255.0;
+
+  color = clamp(color + dither, 0.0, 1.0) * mask;
+  outColor = vec4(color, max(color.r, max(color.g, color.b)));
+}`;
+
+  const INTRO_SECONDS = 1.6;
+  const MAX_FIELD_PIXELS = 1600000;
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+  const compileShader = (gl, type, source) => {
+    const s = gl.createShader(type);
+    if (!s) return null;
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (gl.getShaderParameter(s, gl.COMPILE_STATUS)) return s;
+    console.warn("Shader compile error:", gl.getShaderInfoLog(s));
+    gl.deleteShader(s);
+    return null;
+  };
+
+  const linkProgram = (gl, fragmentSource) => {
+    const v = compileShader(gl, gl.VERTEX_SHADER, QUAD_VERTEX);
+    const f = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+    const p = gl.createProgram();
+    if (!v || !f || !p) return null;
+    gl.attachShader(p, v);
+    gl.attachShader(p, f);
+    gl.bindAttribLocation(p, 0, 'aPosition');
+    gl.linkProgram(p);
+    gl.deleteShader(v);
+    gl.deleteShader(f);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      console.warn("Program link error:", gl.getProgramInfoLog(p));
+      gl.deleteProgram(p);
+      return null;
+    }
+    const uniforms = {};
+    const count = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < count; i++) {
+      const info = gl.getActiveUniform(p, i);
+      if (info) uniforms[info.name] = gl.getUniformLocation(p, info.name);
+    }
+    return { program: p, uniforms };
+  };
+
+  function initBeams(canvasId, userOptions) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const gl = canvas.getContext('webgl2', {
+      alpha: true,
+      premultipliedAlpha: true,
+      antialias: false,
+      depth: false,
+      stencil: false,
+      powerPreference: 'high-performance'
+    });
+
+    if (!gl) {
+      console.warn("WebGL2 not supported, Beams fallback active.");
+      return null;
+    }
+
+    const opts = Object.assign({
+      color: '#ffffff',
+      beamWidth: 170,
+      rotation: 30,
+      speed: 0.85,
+      waveLength: 220,
+      depth: 1.25,
+      sharpness: 0.65,
+      twist: 0.15,
+      fillLight: 0.45,
+      glow: 0.85,
+      brightness: 2.0,
+      variation: 0,
+      grain: 0.18,
+      quality: 0.85,
+      mouseInteraction: true,
+      mouseStrength: 1.0,
+      intro: true,
+      fade: 0.05,
+      opacity: 0.85
+    }, userOptions || {});
+
+    const floatTargets = !!gl.getExtension('EXT_color_buffer_float');
+    const fieldProgram = linkProgram(gl, FIELD);
+    const compositeProgram = linkProgram(gl, COMPOSITE);
+    if (!fieldProgram || !compositeProgram) return null;
+
+    const buffer = gl.createBuffer();
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    let texture = null;
+    const framebuffer = gl.createFramebuffer();
+    const target = { width: 0, height: 0 };
+    const sizeTarget = (w, h) => {
+      if (target.width === w && target.height === h) return;
+      target.width = w;
+      target.height = h;
+      if (texture) gl.deleteTexture(texture);
+      texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      const levels = Math.floor(Math.log2(Math.max(w, h))) + 1;
+      gl.texStorage2D(gl.TEXTURE_2D, levels, floatTargets ? gl.RGBA16F : gl.RGBA8, w, h);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    };
+
+    const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+    const toLinear = (hex) => {
+      if (!probe) return [0.5, 0.55, 0.97];
+      probe.clearRect(0, 0, 1, 1);
+      probe.fillStyle = hex;
+      probe.fillRect(0, 0, 1, 1);
+      const d = probe.getImageData(0, 0, 1, 1).data;
+      return [Math.pow(d[0] / 255, 2.2), Math.pow(d[1] / 255, 2.2), Math.pow(d[2] / 255, 2.2)];
+    };
+
+    const view = { width: 1, height: 1, fieldWidth: 1, fieldHeight: 1 };
+    const pointer = { x: 0, y: 0, inside: false };
+    const state = { clock: 0, intro: 0, reach: 0, x: 0, y: 0, lightY: 0 };
+    let raf = 0;
+    let last = 0;
+
+    const render = () => {
+      const presence = state.intro * state.intro * state.intro * (state.intro * (state.intro * 6 - 15) + 10);
+      gl.bindVertexArray(vao);
+      sizeTarget(view.fieldWidth, view.fieldHeight);
+
+      const angle = (opts.rotation * Math.PI) / 180;
+      const sweep = (1 - presence) * -9;
+      const reach = state.reach * opts.mouseStrength;
+      const f = fieldProgram.uniforms;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.viewport(0, 0, target.width, target.height);
+      gl.useProgram(fieldProgram.program);
+      gl.uniform2f(f.uView, view.width, view.height);
+      gl.uniform2f(f.uScale, view.width / target.width, view.height / target.height);
+      gl.uniform2f(f.uTurn, Math.cos(angle), Math.sin(angle));
+      gl.uniform1f(f.uTime, (state.clock * 0.12) % 289);
+      gl.uniform1f(f.uWidth, opts.beamWidth);
+      gl.uniform1f(f.uWave, opts.waveLength);
+      gl.uniform1f(f.uDepth, opts.depth);
+      gl.uniform1f(f.uRough, 0.55 - opts.sharpness * 0.5);
+      gl.uniform1f(f.uSeed, opts.variation);
+      gl.uniform1f(f.uTwist, opts.twist);
+      gl.uniform1f(f.uFill, opts.fillLight);
+      gl.uniform3f(f.uLight, 0, 3 + sweep + state.lightY * reach, 10);
+      gl.uniform1f(f.uCamera, view.height * 1.866);
+      gl.uniform4f(f.uPointer, state.x, view.height - state.y, reach, Math.max(view.height, view.width) * 0.28);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.generateMipmap(gl.TEXTURE_2D);
+
+      const c = compositeProgram.uniforms;
+      const tint = toLinear(opts.color);
+      const tone = 0.2126 * tint[0] + 0.7152 * tint[1] + 0.0722 * tint[2];
+      const shadeDepth = Math.min(1, 0.18 / Math.max(tone, 0.001));
+      const ink = tint.map(v => Math.pow(Math.min(1, v * shadeDepth), 1 / 2.2));
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.useProgram(compositeProgram.program);
+      gl.uniform2f(c.uResolution, canvas.width, canvas.height);
+      gl.uniform3fv(c.uColor, tint);
+      gl.uniform3fv(c.uInk, ink);
+      gl.uniform1f(c.uGain, opts.brightness);
+      gl.uniform1f(c.uGlow, opts.glow);
+      gl.uniform1f(c.uPresence, presence);
+      gl.uniform1f(c.uGrain, opts.grain * 1.75);
+      gl.uniform1f(c.uFade, opts.fade);
+      gl.uniform1f(c.uOpacity, opts.opacity);
+      gl.uniform1f(c.uLightMode, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform1i(c.uField, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
+
+    const frame = (now) => {
+      raf = 0;
+      if (document.hidden) return;
+      const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
+      last = now;
+      state.clock += dt * opts.speed;
+      if (state.intro < 1) state.intro = Math.min(1, state.intro + dt / INTRO_SECONDS);
+
+      const engaged = opts.mouseInteraction && pointer.inside;
+      if (engaged && state.reach < 0.01) {
+        state.x = pointer.x;
+        state.y = pointer.y;
+      }
+      const follow = 1 - Math.exp(-dt * 7);
+      state.x += (pointer.x - state.x) * follow;
+      state.y += (pointer.y - state.y) * follow;
+      state.reach += ((engaged ? 1 : 0) - state.reach) * (1 - Math.exp(-dt * (engaged ? 3.2 : 1.8)));
+      const turn = (opts.rotation * Math.PI) / 180;
+      const offsetX = state.x - view.width / 2;
+      const offsetY = view.height / 2 - state.y;
+      const along = -Math.sin(turn) * offsetX + Math.cos(turn) * offsetY;
+      state.lightY = clamp((along / (view.height * 0.5)) * 3, -4, 4);
+      render();
+
+      raf = requestAnimationFrame(frame);
+    };
+
+    const resize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      view.width = w;
+      view.height = h;
+      canvas.width = Math.max(1, Math.round(w * ratio));
+      canvas.height = Math.max(1, Math.round(h * ratio));
+      let fieldScale = opts.quality * ratio;
+      if (w * h * fieldScale * fieldScale > MAX_FIELD_PIXELS) {
+        fieldScale = Math.sqrt(MAX_FIELD_PIXELS / (w * h));
+      }
+      view.fieldWidth = Math.max(1, Math.round(w * fieldScale));
+      view.fieldHeight = Math.max(1, Math.round(h * fieldScale));
+      render();
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('pointermove', (e) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.inside = true;
+    }, { passive: true });
+    document.documentElement.addEventListener('pointerleave', () => {
+      pointer.inside = false;
+    });
+
+    resize();
+    raf = requestAnimationFrame(frame);
+
+    return {
+      destroy: () => {
+        cancelAnimationFrame(raf);
+        window.removeEventListener('resize', resize);
+      }
+    };
+  }
+
+  global.initReactBitsBeams = initBeams;
+})(window);
+
+
+</script>
 </head>
 <body>
 
-  <!-- Fullscreen Interactive React Bits Beams WebGL2 Canvas -->
+  <!-- Fullscreen Interactive React Bits Beams WebGL2 Canvas (White/Silver Monochrome) -->
   <canvas id="beams-canvas"></canvas>
+
+  <!-- Viewport-Wide Ambient Liquid Glass Frosted Layer -->
+  <div class="ambient-glass-layer"></div>
 
   <!-- ==========================================================================
        1. POLARIS TOP NAVIGATION BAR (Exact 1:1 Layout)
@@ -982,75 +1592,87 @@
   </header>
 
   <!-- ==========================================================================
-       2. POLARIS FLOATING CAPSULE SIDEBAR DOCK
+       2. EXPANDABLE POLARIS CAPSULE SIDEBAR DOCK (Exact 1:1)
        ========================================================================== -->
-  <nav class="polaris-dock" aria-label="Sidebar Navigation">
-    <!-- Top Emblem Button -->
-    <div class="dock-emblem" onclick="showScreen('command')" title="Polaris Home">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+  <nav class="polaris-dock" id="polaris-dock" aria-label="Sidebar Navigation">
+    <!-- Top Emblem / Brand Header -->
+    <div class="sidebar-header-box" onclick="toggleSidebarPin()" title="Toggle Sidebar">
+      <div class="dock-emblem">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="20" height="20" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
+      </div>
+      <div class="sidebar-header-text">
+        <span class="sidebar-title">ProcureAgent</span>
+        <span class="sidebar-sub">RISK & SPEND INTEL</span>
+      </div>
     </div>
 
     <div class="dock-sep"></div>
 
-    <!-- Navigation Buttons -->
+    <!-- Navigation Buttons with Icons + Text Labels -->
     <div class="dock-icons">
       <!-- 1: Command Centre -->
       <button class="dock-icon-btn active" id="btn-dock-command" onclick="showScreen('command')" aria-label="Command Centre">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-        <span class="dock-tooltip">Command Centre</span>
+        <span class="dock-text-label">Command Centre</span>
       </button>
 
       <!-- 2: Incidents & Threats / Purchases -->
       <button class="dock-icon-btn" id="btn-dock-purchases" onclick="showScreen('purchases')" aria-label="Purchases & Bounties">
         <svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-        <span class="dock-tooltip">Incidents & Purchases</span>
+        <span class="dock-text-label">Incidents & Threats</span>
       </button>
 
       <!-- 3: Polaris Orbit / Workers -->
       <button class="dock-icon-btn" id="btn-dock-workers" onclick="showScreen('workers')" aria-label="Workers & Fleet">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><path d="M10.4 10.4 6.3 6.3"/><path d="m13.6 13.6 4.1 4.1"/><path d="M17.6 6.4 13.6 10.4"/><path d="m6.4 17.6 4-4"/></svg>
-        <span class="dock-tooltip">Polaris Orbit / Fleet</span>
+        <span class="dock-text-label">Polaris Orbit</span>
       </button>
 
       <!-- 4: Assets & Facilities / Policy -->
       <button class="dock-icon-btn" id="btn-dock-policy" onclick="showScreen('policy')" aria-label="Governance Policy">
         <svg viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
-        <span class="dock-tooltip">Governance & Policy</span>
+        <span class="dock-text-label">Assets & Facilities</span>
       </button>
 
       <!-- 5: Sources & Feeds / Audit -->
       <button class="dock-icon-btn" id="btn-dock-audit" onclick="showScreen('audit')" aria-label="Audit Ledger">
         <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-        <span class="dock-tooltip">Sources & Audit Ledger</span>
+        <span class="dock-text-label">Sources & Feeds</span>
       </button>
 
       <!-- 6: Feed Monitoring / Demo Scenarios -->
       <button class="dock-icon-btn" id="btn-dock-demo" onclick="openDemoModal()" aria-label="Demo Scenarios">
         <svg viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
-        <span class="dock-tooltip">Feed Monitoring / Demo</span>
+        <span class="dock-text-label">Feed Monitoring</span>
       </button>
 
       <!-- 7: Settings -->
       <button class="dock-icon-btn" id="btn-dock-settings" onclick="showScreen('policy')" aria-label="Settings">
         <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span class="dock-tooltip">Settings</span>
+        <span class="dock-text-label">Settings</span>
       </button>
     </div>
 
-    <div class="dock-sep"></div>
-
-    <!-- Bottom: Mode Switcher & AA Circular Avatar -->
-    <button class="dock-icon-btn" onclick="togglePlaybackMode()" aria-label="Toggle Mode" title="Toggle Live/Replay">
+    <!-- Log Out Button -->
+    <button class="dock-icon-btn" onclick="togglePlaybackMode()" aria-label="Log Out / Mode" style="margin-top: 4px;">
       <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-      <span class="dock-tooltip">Toggle Replay Mode</span>
+      <span class="dock-text-label">Log Out</span>
     </button>
 
-    <div class="dock-avatar-circle" title="Aarav Sharma [ADMIN]">AA</div>
+    <!-- Bottom User Profile Card -->
+    <div class="sidebar-footer-user" onclick="togglePlaybackMode()" title="Aarav Sharma [ADMIN]">
+      <div class="dock-avatar-circle">AA</div>
+      <div class="user-footer-details">
+        <span class="user-name-line">Aarav Sharma</span>
+        <span class="user-email-line">aarav@polaris.ai</span>
+      </div>
+      <span class="admin-badge" style="margin-left: auto;">ADMIN</span>
+    </div>
   </nav>
 
   <!-- ==========================================================================
        3. MAIN VIEWPORT
-       ========================================================================== -->
+       ========================================================================= -->
   <main class="polaris-main">
 
     <!-- ========================================================================
@@ -1072,7 +1694,7 @@
         </button>
       </div>
 
-      <!-- Dual Column Polaris Command Grid -->
+      <!-- Dual Column Polaris Liquid Glass Command Grid -->
       <div class="command-grid">
         <!-- Left Column: Risk Events Panel -->
         <div class="polaris-panel">
@@ -1112,7 +1734,7 @@
             <div class="card-tags">
               <span class="polaris-tag success">VERIFIED</span>
               <span class="polaris-tag neutral">code_bounty</span>
-              <span class="polaris-tag blue">NEW</span>
+              <span class="polaris-tag neutral" style="color: #fff;">NEW</span>
             </div>
             <div class="bounty-item-title">Fix broken auth token parser in api_client.py</div>
             <div class="bounty-item-meta">
@@ -1126,7 +1748,7 @@
             <div class="card-tags">
               <span class="polaris-tag critical">CRITICAL</span>
               <span class="polaris-tag neutral">adversary</span>
-              <span class="polaris-tag blue">BLOCKED</span>
+              <span class="polaris-tag critical">BLOCKED</span>
             </div>
             <div class="bounty-item-title">Rogue Worker predatory bid ($0.18) rejected at acceptance check</div>
             <div class="bounty-item-meta">
@@ -1327,7 +1949,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr style="background: rgba(99, 102, 241, 0.08);">
+            <tr style="background: rgba(255, 255, 255, 0.05);">
               <td><strong>Code Worker 120B</strong></td>
               <td><strong style="color: var(--accent-emerald);">$0.25</strong></td>
               <td>4.12s</td>
@@ -1351,7 +1973,7 @@
           </tbody>
         </table>
 
-        <div style="font-size: 12px; color: var(--text-dim); background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-glass); border-radius: 10px; padding: 12px 16px; margin-top: 16px;">
+        <div style="font-size: 12px; color: var(--text-dim); background: var(--bg-glass-inner); border: 1px solid var(--border-glass); border-radius: 10px; padding: 12px 16px; margin-top: 16px;">
           <strong>Decision Rationale:</strong> Code Worker 120B was selected because its 98.2% historical reliability score outweighed the minor price difference under organizational reliability rules. When the predatory low bidder (Rogue Worker) failed acceptance tests, the task was safely reallocated with zero financial loss.
         </div>
 
@@ -1496,7 +2118,7 @@
           <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Weekly Spend Cap</h3>
           <div style="font-size: 32px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 6px;">$25.00 <span style="font-size: 14px; color: var(--text-muted);">USD</span></div>
           <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 14px;">Hard transactional ceiling enforced by SQLite reservation lock.</p>
-          <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border-glass);">
+          <div style="background: var(--bg-glass-inner); padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border-glass);">
             <div>Spent this week: <strong>$0.25</strong></div>
             <div>Held for pending tasks: <strong>$0.00</strong></div>
             <div style="color: var(--accent-emerald); margin-top: 4px;">Remaining cap: <strong>$24.75</strong></div>
@@ -1505,9 +2127,9 @@
 
         <div class="polaris-panel">
           <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">Approval Threshold Ceiling</h3>
-          <div style="font-size: 32px; font-weight: 700; color: var(--accent-indigo-light); margin-bottom: 6px;">$5.00 <span style="font-size: 14px; color: var(--text-muted);">ceiling</span></div>
+          <div style="font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 6px;">$5.00 <span style="font-size: 14px; color: var(--text-muted);">ceiling</span></div>
           <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 14px;">Bounties &le; $5.00 execute autonomously. Bounties > $5.00 require manager approval.</p>
-          <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border-glass);">
+          <div style="background: var(--bg-glass-inner); padding: 12px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border-glass);">
             <div>Pending manual approvals: <strong>0 tasks</strong></div>
             <div style="color: var(--text-muted); margin-top: 4px;">Zero unreviewed high-budget tasks pending execution.</div>
           </div>
@@ -1592,7 +2214,7 @@
             <tr>
               <td><strong>#3</strong></td>
               <td>12:58:14</td>
-              <td><span class="polaris-tag blue">Reassign</span></td>
+              <td><span class="polaris-tag neutral">Reassign</span></td>
               <td>Task reallocated to Code Worker 120B under priority scoring</td>
               <td>$0.00</td>
               <td>Broker</td>
@@ -1643,7 +2265,7 @@
     <div class="modal-box">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
         <h3 style="font-size: 17px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-indigo)" stroke-width="2"><path d="M10 2v7.31M14 9.3V1.99M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M10 2v7.31M14 9.3V1.99M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0"/></svg>
           Demo Scenarios Sandbox
         </h3>
         <button onclick="closeDemoModal()" style="background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
@@ -2009,6 +2631,11 @@
       showToast("Displaying Order Receipt " + orderId);
     }
 
+    function toggleSidebarPin() {
+      const dock = document.getElementById("polaris-dock");
+      dock.classList.toggle("pinned");
+    }
+
     // Modal
     function openDemoModal() {
       document.getElementById("demo-modal").classList.add("open");
@@ -2127,28 +2754,28 @@
       closeDemoModal();
     }
 
-    // Init React Bits Beams Background (@react-bits/Beams-TS-TW)
+    // Init React Bits Beams Background (@react-bits/Beams-TS-TW) - White/Silver Monochrome
     function initBeamsBackground() {
       if (typeof window.initReactBitsBeams === "function") {
         try {
           const beams = window.initReactBitsBeams("beams-canvas", {
-            color: "#818cf8",
-            beamWidth: 140,
-            rotation: 28,
-            speed: 0.65,
-            waveLength: 240,
-            depth: 1.15,
-            sharpness: 0.6,
-            twist: 0.12,
-            fillLight: 0.35,
-            glow: 0.75,
-            brightness: 1.45,
-            grain: 0.22,
-            quality: 0.75,
+            color: "#ffffff",
+            beamWidth: 170,
+            rotation: 30,
+            speed: 0.85,
+            waveLength: 220,
+            depth: 1.25,
+            sharpness: 0.65,
+            twist: 0.15,
+            fillLight: 0.45,
+            glow: 0.85,
+            brightness: 2.0,
+            grain: 0.18,
+            quality: 0.85,
             mouseInteraction: true,
-            mouseStrength: 0.85,
-            fade: 0.1,
-            opacity: 0.65
+            mouseStrength: 1.0,
+            fade: 0.05,
+            opacity: 0.85
           });
           if (beams) return;
         } catch (e) {

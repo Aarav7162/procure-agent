@@ -309,25 +309,25 @@ void main() {
     }
 
     const opts = Object.assign({
-      color: '#818cf8',
-      beamWidth: 140,
+      color: '#ffffff',
+      beamWidth: 170,
       rotation: 30,
-      speed: 0.8,
-      waveLength: 233,
-      depth: 1.1,
-      sharpness: 0.6,
-      twist: 0.1,
-      fillLight: 0.35,
-      glow: 0.7,
-      brightness: 1.5,
+      speed: 0.85,
+      waveLength: 220,
+      depth: 1.25,
+      sharpness: 0.65,
+      twist: 0.15,
+      fillLight: 0.45,
+      glow: 0.85,
+      brightness: 2.0,
       variation: 0,
-      grain: 0.25,
-      quality: 0.75,
+      grain: 0.18,
+      quality: 0.85,
       mouseInteraction: true,
-      mouseStrength: 0.9,
+      mouseStrength: 1.0,
       intro: true,
-      fade: 0.1,
-      opacity: 0.65
+      fade: 0.05,
+      opacity: 0.85
     }, userOptions || {});
 
     const floatTargets = !!gl.getExtension('EXT_color_buffer_float');
